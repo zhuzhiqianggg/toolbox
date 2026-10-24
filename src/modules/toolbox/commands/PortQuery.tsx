@@ -1,0 +1,146 @@
+import * as React from 'react';
+import { Network as NetworkIcon, RefreshCw, Copy } from 'lucide-react';
+import { CommandShell } from '@/components/CommandShell';
+import { Button } from '@/components/ui/button';
+import { useCommandShell } from '@/hooks/useCommandShell';
+import { ipc, type PortEntry } from '@/lib/ipc';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import type { CommandProps } from '@/core/types';
+
+const COMMAND_ID = 'port-query';
+
+/**
+ * 端口占用查询：调 Rust 命令 `port_occupants`（netstat + tasklist 解析），
+ * 展示协议 / 本地地址:端口 / 状态 / PID / 进程名，支持按端口或进程名过滤，
+ * 每条可一键复制 `taskkill` 命令（不直接结束进程，避免误杀系统进程）。
+ */
+export function PortQuery({ initialInput = '' }: CommandProps): React.JSX.Element {
+  const shell = useCommandShell(COMMAND_ID);
+  const [entries, setEntries] = React.useState<PortEntry[]>([]);
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const [error, setError] = React.useState<string>('');
+  const [filter, setFilter] = React.useState<string>(initialInput);
+
+  const load = React.useCallback(async (): Promise<void> => {
+    setLoading(true);
+    setError('');
+    try {
+      const data = await ipc.portOccupants();
+      setEntries(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '查询失败');
+      setEntries([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
+  const filtered = React.useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) {
+      return entries;
+    }
+    return entries.filter(
+      (e) =>
+        e.localPort.toString().includes(q) ||
+        e.processName.toLowerCase().includes(q) ||
+        e.localAddress.toLowerCase().includes(q) ||
+        e.pid.toString().includes(q),
+    );
+  }, [entries, filter]);
+
+  const taskkillCmd = (e: PortEntry): string => `taskkill /PID ${e.pid} /F`;
+
+  return (
+    <CommandShell
+      title="端口占用查询"
+      onPaste={(t) => setFilter(t)}
+      description="协议 / 端口 / 状态 / PID / 进程名"
+      icon={<NetworkIcon className="h-4 w-4" />}
+      onBack={shell.onBack}
+      favorite={shell.favorite}
+      onToggleFavorite={shell.onToggleFavorite}
+      copyText={filtered.map((e) => `${e.localPort}\t${e.state}\t${e.pid}\t${e.processName}`).join('\n')}
+      shortcutHint="按端口号 / 进程名 / PID 过滤；复制按钮生成 taskkill 命令（不直接结束进程）"
+    >
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            placeholder="过滤：端口 / 进程名 / PID，如 8080、chrome"
+            className="h-9 flex-1 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+          <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
+            <RefreshCw className={'h-3.5 w-3.5' + (loading ? ' animate-spin' : '')} />
+            刷新
+          </Button>
+        </div>
+
+        {error ? (
+          <div className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="text-xs text-muted-foreground">
+          共 {filtered.length} 条{filter ? `（已过滤，总数 ${entries.length}）` : ''}
+        </div>
+
+        <div className="scrollbar-thin max-h-[420px] overflow-auto rounded-md border border-border">
+          <table className="w-full text-left text-sm">
+            <thead className="sticky top-0 bg-card text-xs text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 font-medium">协议</th>
+                <th className="px-3 py-2 font-medium">本地端口</th>
+                <th className="px-3 py-2 font-medium">状态</th>
+                <th className="px-3 py-2 font-medium">PID</th>
+                <th className="px-3 py-2 font-medium">进程</th>
+                <th className="px-3 py-2 font-medium" />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((e, idx) => (
+                <tr key={`${e.protocol}-${e.localAddress}-${idx}`} className="border-t border-border">
+                  <td className="px-3 py-2 text-foreground">{e.protocol}</td>
+                  <td className="px-3 py-2 font-mono text-foreground">{e.localPort}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{e.state || '—'}</td>
+                  <td className="px-3 py-2 font-mono text-muted-foreground">{e.pid}</td>
+                  <td className="px-3 py-2 text-foreground">{e.processName}</td>
+                  <td className="px-3 py-2 text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      aria-label="复制结束命令"
+                      title={taskkillCmd(e)}
+                      onClick={() => {
+                        void writeText(taskkillCmd(e));
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && !loading ? (
+                <tr>
+                  <td colSpan={6} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                    {entries.length === 0 ? '没有查询到端口占用' : '没有匹配的结果'}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </CommandShell>
+  );
+}
+
+export default PortQuery;

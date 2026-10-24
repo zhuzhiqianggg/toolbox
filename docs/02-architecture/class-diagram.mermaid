@@ -1,0 +1,107 @@
+classDiagram
+  class ToolMeta {
+    +string id
+    +string name
+    +string description
+    +string category
+    +string icon
+    +string[] aliases
+    +string[] keywords
+    +ToolLayout layout
+    +number popularity
+    +boolean isOnline
+    +load() Promise~Component~
+  }
+  class ToolProps {
+    +string initialInput
+    +string source
+    +function onUsed
+  }
+  class ToolRegistry {
+    -Map tools
+    +register(meta) void
+    +getAll() ToolMeta[]
+    +getById(id) ToolMeta
+    +search(query) ToolMeta[]
+    +getByCategory(cat) ToolMeta[]
+    +getFavorites() ToolMeta[]
+    +getRecent() ToolMeta[]
+    +_score(meta, query) number
+  }
+  class AppSettings {
+    +string hotkey
+    +string theme
+    +boolean autoLaunch
+    +boolean autoUpdate
+    +boolean closeToTray
+    +boolean clipboardSuggest
+    +boolean clipboardHistory
+    +boolean recordHistory
+    +number maxHistory
+    +number maxClipboard
+    +string[] sensitiveToolIds
+  }
+  class HistoryEntry {
+    +string id
+    +string toolId
+    +string input
+    +string output
+    +number timestamp
+    +boolean pinned
+  }
+  class ClipboardItem {
+    +string id
+    +ClipboardKind kind
+    +string content
+    +number timestamp
+    +boolean sensitive
+    +boolean pinned
+  }
+  class SettingsStore {
+    +AppSettings settings
+    +load() void
+    +update(patch) void
+    +save() void
+  }
+  class FavoritesStore {
+    +string[] ids
+    +toggle(id) void
+    +isFavorite(id) boolean
+    +list() ToolMeta[]
+  }
+  class HistoryStore {
+    +HistoryEntry[] entries
+    +add(entry) void
+    +clear(toolId) void
+    +list(toolId) HistoryEntry[]
+  }
+  class ClipboardStore {
+    +ClipboardItem[] items
+    +push(item) void
+    +clear() void
+    +detect(text) ClipboardKind
+  }
+  class IpcBridge {
+    +queryPortUsage(port) PortProcess[]
+    +killProcess(pid) void
+    +listProcesses() ProcessInfo[]
+    +fileHash(path, algo) FileHashResult
+    +readFileText(path) string
+    +detectEncoding(path) EncodingResult
+    +writeTextFile(path, content) void
+    +readHosts() string
+    +writeHosts(content) void
+    +getEnvVars() EnvVar[]
+    +getLocalIps() LocalIps
+    +readClipboard() string
+    +writeClipboard(text) void
+  }
+  ToolRegistry "1" o-- "*" ToolMeta : registers
+  ToolMeta ..> ToolProps : component receives
+  SettingsStore --> AppSettings : holds
+  FavoritesStore --> ToolMeta : resolves
+  HistoryStore --> HistoryEntry : holds
+  ClipboardStore --> ClipboardItem : holds
+  HistoryStore ..> IpcBridge : persistence via store plugin
+  ClipboardStore ..> IpcBridge : clipboard via Rust
+  ToolRegistry ..> SettingsStore : reads

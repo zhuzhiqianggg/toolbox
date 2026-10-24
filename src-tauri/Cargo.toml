@@ -1,0 +1,87 @@
+[package]
+name = "handy"
+version = "0.1.0"
+description = "Handy · 顺手 — 跨平台桌面效率套件"
+authors = ["Handy Team"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+# 静态库 / cdylib / rlib 三件套，供桌面与（未来）移动端入口复用
+name = "handy_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png", "macos-private-api", "devtools"] }
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-store = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-os = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-process = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-log = "2"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+rusqlite = { version = "0.32", features = ["bundled"] }
+anyhow = "1"
+thiserror = "1"
+dirs = "5"
+walkdir = "2"
+sysinfo = "0.32"
+
+# 接口测试工具（api-tester）：Rust 侧直发 HTTP，绕开 webview 的 CORS 限制。
+# 与 tauri-plugin-updater 共用同一 reqwest / rustls 依赖树（不引入第二个 TLS 后端）。
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "charset", "http2"] }
+
+# 密码存储器（M5）：AES-256-GCM 加密 + Argon2id 密钥派生（纯 Rust 实现）
+aes-gcm = "0.10"
+argon2 = "0.5"
+rand = "0.8"
+
+# 平台限定依赖：仅 Windows
+[target.'cfg(target_os = "windows")'.dependencies]
+# Win32_UI_Shell_Common（V38 追加）：「系统」格（此电脑 / 回收站 / 用户的文件）
+# 取图标要走 SHParseDisplayName + ITEMIDLIST，后者被这道 feature 门锁着。
+windows = { version = "0.58", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Com",
+  "Win32_System_Threading",
+  "Win32_UI_Accessibility",
+  "Win32_UI_Controls",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_Common",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+# 平台限定依赖：仅 macOS
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.5"
+objc2-foundation = "0.2"
+objc2-app-kit = "0.2"
+core-foundation = "0.9"
+
+[features]
+# 生产构建或未指定 dev server 时使用（Tauri CLI 会自动启用）
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+# 体积优先（对齐 A10：Win < 30MB / mac < 40MB）
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

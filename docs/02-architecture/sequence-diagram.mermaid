@@ -1,0 +1,28 @@
+sequenceDiagram
+  autonumber
+  participant User as 用户
+  participant OS as 系统
+  participant RS as Rust(shortcut/window)
+  participant WV as WebView(前端)
+  participant REG as ToolRegistry
+  participant Tool as 工具组件
+
+  User->>OS: 按下 Alt+Space（任意界面）
+  OS->>RS: global-shortcut 回调触发
+  RS->>RS: window.rs: show() + set_focus()
+  RS-->>WV: 主窗口显示 + 聚焦事件
+  WV->>WV: 聚焦命令面板，自动 focus 输入框
+  WV->>WV: read_clipboard() → lib/detect.ts 识别类型
+  WV->>REG: search(query='') → 返回「收藏 + 最近使用」
+  WV->>WV: 渲染面板首屏（含剪贴板建议条）
+  User->>WV: 输入关键词（如 'jwt'）
+  WV->>REG: search(query) 模糊匹配（含拼音首字母）
+  REG-->>WV: 结果列表（按 relevance 排序）
+  User->>WV: ↑↓ 选择 + Enter
+  WV->>REG: getById(id) → meta.load()
+  REG-->>WV: 懒加载组件 chunk（首次）
+  WV->>Tool: 挂载 <ToolShell><Tool initialInput=剪贴板/></ToolShell>
+  Tool->>Tool: 纯函数计算（前端/或 IPC 调用）
+  Tool-->>User: 结果展示（一键复制）
+  User->>WV: Ctrl+C / 点击复制 → write_clipboard() + toast
+  User->>WV: Esc → 隐藏窗口，保留后台常驻

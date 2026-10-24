@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Handy · 顺手 — 全面诊断与「双面共存 + 归属规则」重构方案</title>
+<style>
+  :root{
+    --bg:#0b0f1a; --bg2:#0f1422; --panel:#131a2b; --panel2:#1a2338;
+    --line:#232f4a; --line2:#2c3a5c;
+    --ink:#e8edf7; --ink2:#aeb8cf; --muted:#76839f;
+    --brand:#5b8cff; --brand2:#79a4ff;
+    --green:#3fca8c; --amber:#f5b95c; --red:#f2778a; --violet:#b18cff; --sky:#4ec9e8;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:
+      radial-gradient(1200px 500px at 80% -100px, rgba(91,140,255,.18), transparent 60%),
+      radial-gradient(900px 500px at -10% 20%, rgba(177,140,255,.12), transparent 55%),
+      var(--bg);
+    color:var(--ink);font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.7;font-size:15px;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:0 28px 120px}
+  a{color:var(--brand2)}
+  /* Header */
+  .hero{padding:64px 0 40px;border-bottom:1px solid var(--line)}
+  .kicker{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;color:var(--brand2);text-transform:uppercase;font-weight:600}
+  .kicker .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:0 0 12px var(--brand)}
+  h1{font-size:34px;line-height:1.25;margin:16px 0 10px;letter-spacing:-.01em}
+  h1 .sub{display:block;font-size:16px;color:var(--ink2);font-weight:500;margin-top:6px;letter-spacing:0}
+  .hero p.lead{color:var(--ink2);max-width:760px;font-size:15.5px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+  .meta span{font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:4px 10px;border-radius:999px}
+  h2{font-size:21px;margin:56px 0 6px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+  h2 .no{font-size:13px;color:var(--brand2);background:rgba(91,140,255,.14);border:1px solid rgba(91,140,255,.32);padding:2px 9px;border-radius:8px;font-weight:700}
+  h3{font-size:15.5px;margin:26px 0 8px;color:var(--ink)}
+  .lead{color:var(--ink2);margin:0 0 16px}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;margin-left:6px;vertical-align:2px;font-weight:600}
+  .t-yes{background:rgba(63,202,140,.15);color:var(--green);border:1px solid rgba(63,202,140,.35)}
+  .t-warn{background:rgba(245,185,92,.14);color:var(--amber);border:1px solid rgba(245,185,92,.35)}
+  .t-no{background:rgba(242,119,138,.13);color:var(--red);border:1px solid rgba(242,119,138,.35)}
+  /* Cards / grids */
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  .card h3{margin-top:0}
+  .card.solid{background:var(--panel2);border-color:var(--line2)}
+  .num{font-size:13px;color:var(--brand2);font-weight:800;font-variant-numeric:tabular-nums}
+  .muted{color:var(--muted)}
+  ul.clean{list-style:none;padding:0;margin:8px 0}
+  ul.clean li{padding:6px 0 6px 22px;position:relative;color:var(--ink2);font-size:14.5px}
+  ul.clean li::before{content:"▸";position:absolute;left:4px;color:var(--brand);font-size:13px}
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:14px 0}
+  th{text-align:left;color:var(--ink);font-weight:600;background:var(--panel2);padding:10px 12px;border:1px solid var(--line2);font-size:12.5px;letter-spacing:.02em}
+  td{padding:9px 12px;border:1px solid var(--line);color:var(--ink2);vertical-align:top}
+  tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+  td b,td strong{color:var(--ink)}
+  .pill{display:inline-block;font-size:11px;padding:1px 8px;border-radius:999px;font-weight:600}
+  .p-a{background:rgba(63,202,140,.16);color:var(--green)}
+  .p-b{background:rgba(177,140,255,.16);color:var(--violet)}
+  .p-c{background:rgba(78,201,232,.16);color:var(--sky)}
+  .p-keep{background:rgba(245,185,92,.16);color:var(--amber)}
+  /* callouts */
+  .callout{border-left:3px solid var(--brand);background:rgba(91,140,255,.07);padding:14px 16px;border-radius:8px;margin:16px 0}
+  .callout.warn{border-color:var(--amber);background:rgba(245,185,92,.07)}
+  .callout.danger{border-color:var(--red);background:rgba(242,119,138,.07)}
+  .callout.good{border-color:var(--green);background:rgba(63,202,140,.07)}
+  .callout b{color:var(--ink)}
+  .code{font-family:"Cascadia Code",Consolas,monospace;font-size:12.5px;background:#0a0e18;border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;color:var(--sky);line-height:1.6}
+  /* diagram */
+  .diagram{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;overflow-x:auto}
+  .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-width:520px}
+  .dbox{border-radius:12px;padding:14px 16px;border:1px solid var(--line2);background:var(--panel2)}
+  .dbox h4{margin:0 0 8px;font-size:14px;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .dbox ul{margin:4px 0 0;padding-left:18px;font-size:13px;color:var(--ink2)}
+  .dbox li{margin:3px 0}
+  .drule{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px;align-items:center;margin:6px 0}
+  .dperm{font-size:11px;text-align:center;padding:3px 8px;border-radius:6px;font-weight:600}
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 22px;font-size:13.5px}
+  .toc a{color:var(--ink2);text-decoration:none}
+  .toc a:hover{color:var(--brand2)}
+  .toc ol{margin:0;padding-left:20px}
+  .toc li{margin:5px 0}
+  .hr{border:0;border-top:1px solid var(--line);margin:44px 0}
+  .kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}
+  .kpi .card{text-align:center;padding:16px 12px}
+  .kpi .big{font-size:30px;font-weight:800;color:var(--brand2);font-variant-numeric:tabular-nums;line-height:1.1}
+  .kpi .lbl{font-size:12px;color:var(--muted);margin-top:4px}
+  footer{margin-top:70px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  @media(max-width:720px){.hero h1{font-size:26px}h2{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="kicker"><span class="dot"></span>Handy · 顺手 &nbsp;综合诊断与重构方案</div>
+    <h1>从「工具集合」到「随手一手拾取」<span class="sub">双面共存 + 归属规则，让桌面每次自动排出最佳布局</span></h1>
+    <p class="lead">回答你的核心问题：「工具箱已经贴在桌面上，是否还需要一个独立 Handy 窗口？」——<b style="color:var(--ink)">要，但重定位。</b> 桌面层负责「顺手用一下」，主窗口（控制台）负责「完整界面 / 管理 / 设置」，二者用一套清晰的「归属规则」分工，既消除重复，又不让任何功能从桌面「掉线」。</p>
+    <div class="meta">
+      <span>面向：产品 / 架构 / 前端 / Rust 桌面层</span>
+      <span>适用批次：V49+</span>
+      <span>策略方向：双面共存（已确认）</span>
+      <span>交付：方案 + 已落地实现 + 验证</span>
+    </div>
+  </header>
+
+  <!-- ============ TOC ============ -->
+  <nav class="toc" style="margin-top:34px">
+    <b style="color:var(--ink)">目录</b>
+    <ol>
+      <li><a href="#s0">结论速览（TL;DR）</a></li>
+      <li><a href="#s1">项目体检：现状评估</a></li>
+      <li><a href="#s2">战略定案：双面共存 + 归属规则</a></li>
+      <li><a href="#s3">目标架构：窗口模型与数据一致性</a></li>
+      <li><a href="#s4">智能自动整理引擎（核心详设）</a></li>
+      <li><a href="#s5">重复内容去重与归属收敛清单</a></li>
+      <li><a href="#s6">界面风格 / 布局优化（借鉴腾讯 / 360 整理）</a></li>
+      <li><a href="#s7">落地路线图（分阶段、可验证）</a></li>
+      <li><a href="#s8">附录：本轮已落地改动与验证结果</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============ 0 TL;DR ============ -->
+  <section id="s0">
+    <h2><span class="no">0</span>结论速览</h2>
+    <div class="kpi">
+      <div class="card"><div class="big">保留</div><div class="lbl">主窗口，但重定位为「按需唤出的工作室」</div></div>
+      <div class="card"><div class="big">3 件套</div><div class="lbl">桌面 = 格子 + 抽屉 + 贴条，全自动整理</div></div>
+      <div class="card"><div class="big">1 套归属</div><div class="lbl">一条规则消灭「为何有两份工具箱」</div></div>
+      <div class="card"><div class="big">智能引擎</div><div class="lbl">盒内排序 + 自适应布局 + 自动安置新文件</div></div>
+    </div>
+    <div class="callout good">
+      <b>战略性结论：</b>项目历史已经替我们走过一次弯路 —— V42 曾尝试「桌面为主、摘掉侧栏」，你 09-19 复盘时改回「保留主窗口作模块宿主 / 控制台」，V45 已恢复。把桌面上的工具、工作台、桌面整理与主窗口同时保留，<b>并非重复</b>，而是「顺手做 vs 完整办」两个场景的正确分工。本轮要做的是把这条分工<b>说清、做显、自动化</b>。
+    </div>
+    <ul class="clean">
+      <li><b>核心差距一（智能自动整理）：</b>现有整理引擎按类别分组、增量补位、保留用户布局，但<b>盒内未按使用频率 / 时间排序</b>，也无「桌面内容变化时自动把新条目安好」的触发。</li>
+      <li><b>核心差距二（归属确认）：</b>桌面抽屉「工具」页签与主窗口「工具箱」模块展示的是<b>同一批工具、同一份实现</b>（共用注册表契约），用户端缺少一句话说清「用哪一个」。</li>
+      <li><b>核心差距三（视觉一致）：</b>桌面三件套与主窗口是两套风格语言（深色实心 vs light/dark 主题），未共用统一的收纳盒视觉 token。</li>
+    </ul>
+  </section>
+
+  <!-- ============ 1 体检 ============ -->
+  <section id="s1">
+    <h2><span class="no">1</span>项目体检：现状评估</h2>
+    <h3>1.1 技术栈与工程形态</h3>
+    <div class="grid g3">
+      <div class="card"><div class="num">Tauri 2</div><div class="muted">Rust 原生后端，5 种窗口根</div></div>
+      <div class="card"><div class="num">React 18 + Vite</div><div class="muted">TS，模块化注册表架构</div></div>
+      <div class="card"><div class="num">SQLite + Store</div><div class="muted">handy.db / settings.json 持久化</div></div>
+      <div class="card"><div class="num">7 大模块</div><div class="muted">工具箱·工作台·桌面整理·便签·待办·密码库·桌面格子</div></div>
+      <div class="card"><div class="num">V37–V48</div><div class="muted">桌面层已迭代到「呈现层」模型</div></div>
+      <div class="card"><div class="num">24+</div><div class="muted">效率工具，按 7 分类归组</div></div>
+    </div>
+
+    <h3>1.2 窗口模型（当前）</h3>
+    <div class="diagram">
+      <div class="dgrid">
+        <div class="dbox">
+          <h4>⚙️ 桌面层（常驻，全时可见）</h4>
+          <ul>
+            <li><b>grid-overlay</b>：格子 / 挂件 / Dock / 工具栏，压在最底、桌面之上</li>
+            <li><b>右侧抽屉（工具 / 快捷）</b>：找 + 用，就地打开工具</li>
+            <li><b>workstation-bar</b>：桌面顶部今日概览贴条</li>
+            <li>核心价值：<b>零窗口切换</b></li>
+          </ul>
+        </div>
+        <div class="dbox">
+          <h4>🖥️ 主窗口（控制台，按需唤出）</h4>
+          <ul>
+            <li><b>模块宿主</b>：工具箱 / 工作台 / 桌面整理 / 密码库</li>
+            <li><b>设置中心</b> / 命令面板 / 全局搜索</li>
+            <li>便签独立窗（note）</li>
+            <li>核心价值：<b>空间 + 持续 + 管理</b></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3>1.3 治理成熟度（优点）</h3>
+    <div class="grid g2">
+      <div class="card solid">
+        <h3>✅ 强项</h3>
+        <ul class="clean">
+          <li>呈现层模型（V37）：只登记引用，<b>绝不移动用户文件</b>，杜绝历史上 704 层递归事故</li>
+          <li>唯一真源 / 状态机 / 不变量（V46–V47）：桌面显隐、图标接管已有权威定义与诊断脚本</li>
+          <li>「在控制台打开」出口已内建于抽屉工具窗（V46），归属规则已露雏形</li>
+          <li>命令 / 模块共用注册表契约，桌面与主窗口同一份实现，无第二套代码</li>
+          <li>审计与回归脚本完备（tool-audit / sample-smoke / regression/run.mjs）</li>
+        </ul>
+      </div>
+      <div class="card solid">
+        <h3>⚠️ 差距 / 风险</h3>
+        <ul class="clean">
+          <li>整理引擎<b>盒内无序</b>：同格文件按登记顺序，不按使用 / 时间；「最佳布局」观感不足</li>
+          <li><b>无自动触发</b>：只会手动「一键整理」，新文件出现在桌面不会自动归置</li>
+          <li>「两份工具箱」的<b>认知重复</b>尚无一句话向用户说清</li>
+          <li>桌面三件套与主窗口<b>视觉语言不统一</b>（深色实心 vs light/dark 主题）</li>
+          <li>桌面层核心在 Rust + 真实 Windows，<b>自动化类改动回归成本高</b>，需自测 + 装机验证</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2 战略定案 ============ -->
+  <section id="s2">
+    <h2><span class="no">2</span>战略定案：双面共存 + 归属规则</h2>
+    <p class="lead">「方便，而不是全面」是产品命名主张。桌面层就是「方便」的兑现，主窗口则是「很多场景天生需要空间与持续性」的兑现。两不是重复，是互补。</p>
+
+    <h3>2.1 为什么不能「全部塞进桌面、取消主窗口」</h3>
+    <div class="callout warn">
+      桌面的强项是<b>随手够得着</b>，弱项是<b>不装大内容</b>。分栏类工具（JSON 格式化、文本对比、Cron 描述）在抽屉里已经要「铺满」，再并进设置中心、命令面板、桌面整理控制台、布局备份这类「需要反复进出 / 需要完整画布」的页面，桌面会被撑成第二个任务栏。<b>抽屉的核心设计「装得下一个真实工具」本身就说明：工具需要空间，而空间不该都堆在桌面上。</b>
+    </div>
+    <h3>2.2 归属判定规则（一条即可决策）</h3>
+    <div class="diagram">
+      <div class="drule"><span class="pill p-keep">判定</span><b>这个任务在 10 秒内能完成吗？</b><b>需要空间 / 持续 / 管理吗？</b></div>
+      <div class="drule"><span class="pill p-a">→ 是</span><span><b>桌面</b>：随手用一下，就地完成</span><span class="dperm"><span class="pill p-a">放在桌面层</span></span></div>
+      <div class="drule"><span class="pill p-b">→ 否</span><span><b>控制台</b>：完整界面 / 更多空间 / 可反复进出</span><span class="dperm"><span class="pill p-b">放进主窗口</span></span></div>
+    </div>
+    <table>
+      <thead><tr><th>功能</th><th>桌面（顺手面）</th><th>主窗口（控制台）</th><th>归属依据</th></tr></thead>
+      <tbody>
+        <tr><td><b>效率工具</b></td><td>抽屉「工具」页签就地打开动</td><td>工具箱模块，完整界面，`在控制台打开` 出口</td><td>同一注册表契约，桌面轻用 / 控制台必用完整版；工具较复杂时一键升格</td></tr>
+        <tr><td><b>工作台</b></td><td>顶部今日贴条 + 抽屉快捷入口</td><td>工作台模块（日历/计划/笔记聚合）</td><td>贴条看概览，完整聚合与编辑进控制台</td></tr>
+        <tr><td><b>桌面整理</b></td><td>桌面格子 + 右键「打开 Handy 桌面整理」</td><td>桌面整理控制台（管理/布局备份/诊断）</td><td>呈现层在桌面，管理与排布配置进控制台</td></tr>
+        <tr><td><b>设置 / 命令面板 / 搜索</b></td><td>快捷键直达 / 抽屉入口</td><td>设置中心 + 全局命令面板</td><td>低频、偏好性，天然在控制台</td></tr>
+      </tbody>
+    </table>
+    <div class="callout good">
+      <b>一句话给用户：</b>「桌面上顺手用，控制台里完整办 —— 同一个工具，在这两边是同一份手，不是两份。开关在地桌面时快，需要多一点空间时点『在控制台打开』就过去。」
+    </div>
+  </section>
+
+  <!-- ============ 3 目标架构 ============ -->
+  <section id="s3">
+    <h2><span class="no">3</span>目标架构：窗口模型与数据一致性</h2>
+    <div class="diagram">
+      <div class="dgrid">
+        <div class="dbox">
+          <h4>⚙️ 桌面层（极致顺手）</h4>
+          <ul>
+            <li><b>智能格子</b>：语义收纳盒 + 盒内智能排序 + 自适应列数</li>
+            <li><b>右侧抽屉</b>：工具 / 快捷 / 系统入口</li>
+            <li><b>顶部贴条</b>：今日日历 / 待办 / 快捷</li>
+            <li>自动触发：桌面内容变化 → 新条目智能安置</li>
+          </ul>
+        </div>
+        <div class="dbox">
+          <h4>🖥️ 主窗口（按需工作室）</h4>
+          <ul>
+            <li>模块宿主侧栏 + 各模块完整视图</li>
+            <li>设置中心 / 命令面板 / 全局搜索</li>
+            <li>桌面整理控制台（管理 / 备份 / 诊断）</li>
+          </ul>
+        </div>
+      </div>
+      <div style="text-align:center;color:var(--muted);font-size:13px;padding:10px 0 0">
+        ⇅ 共享同一份数据层（grid_boxes / grid_meta / notes / todos / settings）与同一套命令 · 模块注册契约
+      </div>
+    </div>
+    <h3>3.1 数据一致性铁律（延续 V46 不变量）</h3>
+    <ul class="clean">
+      <li>桌面层与主窗口<b>绝不各持一份数据</b>；挂件窗只能发事件，主窗口的 store 每窗口独立（ADR-8），跨窗靠 Rust 命令 + `handy:navigate`。</li>
+      <li>布局几何<b>只来自 Rust</b>，前端只画。新增的「盒内排序 / 自适应」同样落到 Rust 引擎，前端不得另起一套布局算法（避免「两套布局」回归）。</li>
+      <li>新增任何浮层组件必须登记命中区白名单（V47 强制动作）。</li>
+    </ul>
+  </section>
+
+  <!-- ============ 4 智能自动整理引擎 ============ -->
+  <section id="s4">
+    <h2><span class="no">4</span>智能自动整理引擎（核心详设）</h2>
+    <p class="lead">目标：<b>每次整理（含自动触发）都能让桌面展出「最佳布局」</b>——归类语义、盒内有序、自适应密度、新文件自动进场，且<b>绝不动用户文件、绝不破坏用户已摆好的布局</b>。</p>
+
+    <h3>4.1 现状基线（Rust <code>grid.rs</code>）</h3>
+    <div class="code">arrange_group_of(item)   // .lnk→None(进竖条)；文件夹→"文件夹"；其余按扩展名类别
+arrange_group_rank()      // 文件夹=0，其余类别=2，"其他"=3
+auto_arrange_inner()      // 扫两个桌面根 → 按类别分组 → 只登记引用 → dissolve_auto_boxes → layout_all_boxes(Fill)
+layout_all_boxes(Fill)    // 增量：已摆好的格子不动，只安置新建/重叠/越界
+LayoutMode::Reset         // "重新重置整理"：全量按规则重排，覆盖用户手动调整</code></div>
+
+    <h3>4.2 增强设计</h3>
+
+    <h3>A · 归类细化（借鉴腾讯 4 类 / 360 收纳盒）</h3>
+    <table>
+      <thead><tr><th>收纳盒</th><th>收录</th><th>当前来源</th><th>处置</th></tr></thead>
+      <tbody>
+        <tr><td><b>文件夹</b></td><td>桌面文件夹（含 Handy 历史容器）</td><td>is_dir</td><td>保留</td></tr>
+        <tr><td><b>图片</b></td><td>png/jpg/jpeg/gif/webp/svg/bmp/ico</td><td>category=图片</td><td>保留</td></tr>
+        <tr><td><b>文档</b></td><td>doc/docx/xls/ppt/pdf/txt/md…</td><td>category=文档</td><td>保留</td></tr>
+        <tr><td><b>压缩包 / 安装包</b></td><td>zip/rar/7z/tar.gz；exe/msi</td><td>独立类别</td><td>保留</td></tr>
+        <tr><td><b>快捷方式</b></td><td>.lnk + 系统入口（此电脑/回收站/用户文件）</td><td>左侧未归类竖条</td><td>保留不进格子</td></tr>
+        <tr><td><b>媒体 / 其他</b></td><td>音视频、其它扩展名</td><td>"其他"</td><td>可细分「媒体」盒</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      细化的主价值是<b>语义一致</b>：用户一眼知道自己桌面有什么。单类别条目过少（如某类别只有 1 个文件）时，不要开一个只有一项的盒子 —— 合并进「其他」，避免把桌面切成碎片。
+    </div>
+
+    <h3>B · 盒内智能排序（本轮最该先做的「最佳布局」）</h3>
+    <p class="lead">同一盒子里，条目不再按登记先后堆叠，而按<b>重要性优先级</b>排：</p>
+    <table>
+      <thead><tr><th>优先级</th><th>排序键</th><th>数据来源</th><th>效果</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>用户手动置顶 / 已钉</td><td>grid_items.pinned / 拖拽顺序</td><td>常用项永远在最前</td></tr>
+        <tr><td>2</td><td>最近使用（frecency）</td><td>打开事件埋点（可选）</td><td>高频项上浮</td></tr>
+        <tr><td>3</td><td>修改时间（新在前）</td><td>文件 mtime（扫描可得）</td><td>新文件置前</td></tr>
+        <tr><td>4</td><td>名称（稳定兜底）</td><td>文件名</td><td>其余按名排，可预期</td></tr>
+      </tbody>
+    </table>
+    <p class="muted">落地位置：Rust <code>register_item</code> 与 <code>layout_all_boxes</code> 之间，为每个盒子按上述键生成 <code>sort</code>；前端盒子内渲染 read 该 sort。纯逻辑可单测（复用现有 mtime 扫描，不含埋点也能先按「mtime + 置顶」排序）。</p>
+
+    <h3>C · 自适应布局（随工作区密度排布）</h3>
+    <ul class="clean">
+      <li>按挂件窗可用宽高决定<b>列数与每盒容量</b>：宽屏多用列、窄屏换行展开，避免「一列排到桌面底外」（历史缺陷）。</li>
+      <li>盒子尺寸按内容<b>自动撑开</b>（已有能力），超高时盒内滚动，不挤压其它区域。</li>
+      <li>镜像流布（自右向左）+ 挂件占右上，保持 V47 的整列保留规则。</li>
+    </ul>
+
+    <h3>D · 自动触发（每次变化都保持最佳）</h3>
+    <div class="callout good">
+      新建/下载/拖入的条目落到桌面后，<b>不打扰用户地把新条目安置进对应盒子</b>（沿用 `LayoutMode::Fill`，新条目增量归位、已摆好的不动）。这是「每次整理都自动展示最佳布局」的轻度自动化 —— 不做全量重排（那会覆盖用户手动布局）。
+    </div>
+    <table>
+      <thead><tr><th>触发源</th><th>建议行为</th><th>实现</th></tr></thead>
+      <tbody>
+        <tr><td>桌面条目变化（新建 / 移动 / 下载完成）</td><td>增量安置新条目</td><td>Rust 桌面变更轮询或 SHChangeNotify，去抖后调 Fill 布局</td></tr>
+        <tr><td>一键整理（手动）</td><td>全量扫描 + 增量安置（保留用户布局）</td><td>现状保留</td></tr>
+        <tr><td>「重新重置整理」</td><td>全量按规则重排</td><td>现状保留（LayoutMode::Reset）</td></tr>
+        <tr><td>切换分辨率 / 显示器</td><td>触发一次自适应布局</td><td>监听 display change</td></tr>
+      </tbody>
+    </table>
+
+    <h3>E · 防回归不变量（无论怎么自动化都不能破坏）</h3>
+    <ul class="clean">
+      <li>I1 `Off ⇒ 原生图标可见`；I3 挂件窗恒可见；I4 窗口显隐与图标显隐同源；I5 绝不移动用户文件。</li>
+      <li>自动触发<b>只增量安置新条目</b>，绝不覆盖用户已摆好 / 已手动移出的格子。</li>
+      <li>自动安置前必须读 <code>sync_dismissed</code>（用户移出名单）：刚被用户移出的条目不自动塞回。</li>
+      <li>任何自动布局后跑一次 <code>z_verdict</code> 复验（V47）。</li>
+    </ul>
+  </section>
+
+  <!-- ============ 5 去重 ============ -->
+  <section id="s5">
+    <h2><span class="no">5</span>重复内容去重与归属收敛清单</h2>
+    <p class="lead">「清理重复」前提是分清哪些是<b>真重复（该删）</b>，哪些是<b>同一份数据两种展示位（该说清、不该删）</b>。</p>
+    <table>
+      <thead><tr><th>位置</th><th>类型</th><th>处置</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td>抽屉「工具」页签 ⇄ 主窗口「工具箱」模块</td><td>同一注册表契约</td><td><b>保留</b>，加"双面分工"说明，`在控制台打开`出口统一</td><td>轻用 vs 完整用，职责不同、数据唯一</td></tr>
+        <tr><td>抽屉「快捷」⇄ 底部 Dock</td><td>同源 quicklinks</td><td><b>保留</b>，两处只增删改同一份数据</td><td>抽屉找 / Dock 用</td></tr>
+        <tr><td>「工作台」模块 ⇄ 顶部贴条</td><td>同一 notes/todos</td><td><b>保留</b>，贴条看概览，模块做聚合编辑</td><td>概览 vs 完整</td></tr>
+        <tr><td>便签：桌面便签窗 + 工作台便签面板</td><td>同 notes 表</td><td>保留多窗口编辑（V08 设计）</td><td>便签天然悬浮</td></tr>
+        <tr><td>历史遗留「系统 / 快捷方式」空格、`::%` 残留登记</td><td>数据残留</td><td>确认由 dissolve_auto_boxes 幂等清理</td><td>真重复，清理</td></tr>
+        <tr><td>「桌面整理」双入口（侧栏 + 桌面右键）</td><td>同一视图</td><td>保留两入口</td><td>自然反射（桌面右键）+ 固定导航</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <b>结论：本项目的「重复」绝大多数是有意为之的场景分工，真正的清理点是「让用户一眼看懂为什么有两个位置」</b>—— 用归属说明卡 + 统一的『在控制台打开 / 收起』出口来兑现，而不是删功能。
+    </div>
+  </section>
+
+  <!-- ============ 6 风格 ============ -->
+  <section id="s6">
+    <h2><span class="no">6</span>界面风格 / 布局优化（借鉴腾讯 / 360 整理）</h2>
+    <h3>6.1 怎么借鉴「社整理」的观感，又守住本项目底线</h3>
+    <div class="callout warn">
+      腾讯 / 360 桌面整理的招牌是<b>半透明毛玻璃收纳盒 + 分类色图标</b>。但本项目 V46 用户明确否掉半透明（「工都要不要透明了，透明有问题」「很难清楚的操作」）—— 那是在<b>高对比壁纸</b>上的真实可用性问题。所以借鉴其<b>收纳盒组织逻辑与分类色彩语言</b>，<b>不做它的透明玻璃</b>，保持深色实心高可读性。
+    </div>
+    <table>
+      <thead><tr><th>可取点（借鉴）</th><th>本项目落地</th></tr></thead>
+      <tbody>
+        <tr><td>分类收纳盒：一眼归类的语义容器</td><td>保留格子；盒内按 4.2-B 智能排序；盒子浅色分类色块 + 图标统一</td></tr>
+        <tr><td>分类用色识别（图片粉 / 文档蓝 / 压缩黄…）</td><td>给每个分类配一个浅底 chip 色（沿用 ToolGrid / toolCategories 的色值语言）</td></tr>
+        <tr><td>自动整理零门坎</td><td>新增「自动整理」偏好开关 + 内容变化自动安置（路线图 B）</td></tr>
+        <tr><td>图标批量 / 大图标</td><td>盒内条目图标沿用系统图标，标题字号统一上调（V45 方向）</td></tr>
+      </tbody>
+    </table>
+    <h3>6.2 统一视觉 token（消除桌面 ↔ 控制台割裂）</h3>
+    <ul class="clean">
+      <li>建立共享的「收纳盒」设计原语：圆角、浅分类色、图标容器、条目行 —— 桌面格子与管理页复用同一套，杜绝两套语言。</li>
+      <li>桌面工具本体 <code>bg-neutral-950</code> 实心 + 圆角；控制台工具页保持 light/dark 主题。两者通过<b>分类色 chip 与图标</b>对齐。</li>
+      <li>首屏信息密度：工具箱、工作台首屏克制，核心功能前置，非核心收纳到底部（沿用你的偏好）。</li>
+    </ul>
+  </section>
+
+  <!-- ============ 7 路线图 ============ -->
+  <section id="s7">
+    <h2><span class="no">7</span>落地路线图（分阶段、可验证）</h2>
+    <table>
+      <thead><tr><th>阶段</th><th>范围</th><th>验证方式</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="pill p-a">A · 本轮已做</span></td>
+          <td>归属规则说清：桌面/控制台双面分工说明；统一「在控制台打开 / 收起」出口；智能整理偏好入口；风格一致化首批（收纳盒分类色）。</td>
+          <td>前端 typecheck + build + 浏览器实时渲染验证（见附录）</td>
+        </tr>
+        <tr>
+          <td><span class="pill p-b">B · 待排</span></td>
+          <td>Rust 整理引擎增强：盒内智能排序（mtime + 置顶）、自适应列数、类别细分。</td>
+          <td>Rust 单测（纯逻辑）+ 装机桌面实测 + audit/zdiag</td>
+        </tr>
+        <tr>
+          <td><span class="pill p-c">C · 待排</span></td>
+          <td>自动触发：桌面内容变化 → 增量安置新条目（去抖、守 sync_dismissed 与不变量）。</td>
+          <td>真实桌面新增/删除文件回归 + window-probe</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ 8 附录 ============ -->
+  <section id="s8">
+    <h2><span class="no">8</span>附录：本轮已落地改动与验证结果</h2>
+    <div class="card">
+      <h3>8.1 本轮已落地改动（前端 · 安全可测）</h3>
+    <table>
+      <thead><tr><th>文件</th><th>改动</th><th>验证</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/lib/smartArrange.ts</code></td><td>新增「智能桌面整理」纯函数引擎：归组（文件夹/图片/文档/压缩包/安装包/媒体/其他 + 单条目合并规则）+ 盒内排序（sort→mtime→名称）。镜像 Rust <code>grid.rs</code>，Rust 为准。</td><td>typecheck + 16 单测通过</td></tr>
+        <tr><td><code>scripts/regression/test-smart-arrange.mjs</code></td><td>新增智能整理回归套件（16 例）</td><td>全绿</td></tr>
+        <tr><td><code>scripts/regression/run.mjs</code></td><td>注册新套件</td><td>—</td></tr>
+        <tr><td><code>src/modules/desktop-grid/DesktopSidePanel.tsx</code></td><td>抽屉工具页列表底部加「归属」说明：实心面板顺手用，需要空间/完整界面点右上「在控制台打开」</td><td>浏览器渲染验证</td></tr>
+      </tbody>
+    </table>
+    <h3>8.2 验证结果</h3>
+    <table>
+      <thead><tr><th>项</th><th>命令</th><th>结果</th></tr></thead>
+      <tbody>
+        <tr><td><b>智能整理单测</b></td><td><code>node --experimental-strip-types scripts/regression/test-smart-arrange.mjs</code></td><td>16 通过 / 0 失败</td></tr>
+        <tr><td><b>类型检查</b></td><td><code>npm run typecheck</code></td><td>通过（无报错）</td></tr>
+        <tr><td><b>前端构建</b></td><td><code>npm run build</code></td><td>built in 8s，无错误</td></tr>
+        <tr><td><b>浏览器实时渲染</b></td><td><code>npm run dev</code> + browser_use</td><td>应用正常挂载，无白屏；工具箱/工作台/桌面整理/设置导航齐备；仅 Tauri 诊断端口连接拒绝（纯浏览器预期非致命）</td></tr>
+      </tbody>
+    </table>
+    <h3>8.3 真实桌面打包· 安装 · 验收（V49 release）</h3>
+    <table>
+      <thead><tr><th>阶段</th><th>命令 / 依据</th><th>结果</th></tr></thead>
+      <tbody>
+        <tr><td><b>打包流水线</b></td><td><code>bash scripts/build-release.sh</code>（真实 Git Bash）</td><td>0/6 前置(cargo1.98) → 1/6 tsc 0 错 → 2/6 回归 18/18 → 3/6 vite → 4/6 tauri build → 完成，EXIT=0</td></tr>
+        <tr><td><b>安装包产物</b></td><td><code>target/release/bundle/nsis/Handy_0.1.0_x64-setup.exe</code>（5 MB）+ MSI（6 MB）</td><td>生成于 19:40（本批次）</td></tr>
+        <tr><td><b>取证（内容正确）</b></td><td>tauri build 取证；dist 含新文案，exe mtime(19:40) &gt; dist(19:35)</td><td>前端产物已打进 exe</td></tr>
+        <tr><td><b>装机</b></td><td>NSIS 静默安装到 <code>%LOCALAPPDATA%\Handy\handy.exe</code>（11 MB）</td><td>mtime 前进 19:40:00，启动后进程存活</td></tr>
+        <tr><td><b>真实桌面 Z 序</b></td><td><code>window-probe.py zlist</code></td><td>「桌面挂件 · Handy」可见(1707×912, L=1)，主窗口按需隐藏，Progman 处于最底，reassert 关系成立</td></tr>
+        <tr><td><b>图标接管</b></td><td><code>desktop-icon-probe.py</code></td><td>Handy 操作的 explorer SysListView32 已隐藏 ✓（接管生效）</td></tr>
+        <tr><td><b>格子状态</b></td><td><code>grid-boxes-dump.py</code> + grid-meta</td><td>13 盒（文件夹/文档/图片/压缩包/安装包 + 6 便签 + 日历），无串列；takeover=1 overlay=1</td></tr>
+        <tr><td><b>工具箱分类一致性</b></td><td><code>tool-audit.mjs</code></td><td>PASS 339 / FAIL 0 / WARN 0</td></tr>
+        <tr><td><b>页面布局回归</b></td><td><code>layout-audit.mjs</code></td><td>26 页 × 1680px：ox=0/mox=0，有问题组合 <b>0 / 84</b></td></tr>
+      </tbody>
+    </table>
+    <div class="callout good">
+      <b>本轮验收结论：</b>V49 已走真实 release 流水线打包、静默安装到本地、真实桌面启动核验 —— 桌面挂件窗可见、图标接管生效、语义收纳盒内容正常、工具箱分类与页面布局回归全绿。你在浏览器里看不到的这部分，现在有真机证据了。
+    </div>
+  </div>
+  </section>
+
+  <footer>
+    Handy · 顺手 — 综合诊断与重构方案 · V49 起草 · 简体中文
+  </footer>
+</div>
+</body>
+</html>

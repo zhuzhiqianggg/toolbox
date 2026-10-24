@@ -1,0 +1,67 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+dist-ssr/
+dist-*/
+
+# Tauri / Rust 编译产物
+src-tauri/target/
+
+# Tauri 生成的 capabilities schema / 权限清单（由 CLI 生成，不入库）
+src-tauri/gen/
+
+# 临时 / 诊断文件（自检脚本等产生的中间产物）
+*.chk.txt
+*.diag.txt
+.diag_*
+.tmp-*
+_tmp_*
+# 会话内的取证 / 日志落盘目录（构建日志、tsc 输出、扫描结果等，不入库）
+.tmp/
+
+# 根目录下的验证 / 诊断残留（构建日志、CDP 抓取、tsc 输出等，均不入库）
+/*.txt
+/*.log
+/*_*.log
+/*.out
+/*.exit
+
+# 验收截图（本地留证用，不入库；含真机桌面图标与文件名，勿推公网）
+/_shots/
+/desktop-screenshot*.png
+
+# 其他编辑器 / 工具的分享产物（Trae 等）
+.trae-html-share-packages/
+
+# 会话内的自检输出（cargo test / 变异自检 / 布局审计的结果落盘）
+.workbuddy/audit-out/
+
+# Vite 每次构建在根目录留下的配置临时产物
+vite.config.ts.timestamp-*.mjs
+
+# 日志
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 编辑器与系统
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.local
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 测试与覆盖率
+coverage/
+
+# 本机构建日志（build-release.sh 产出）
+.build-logs/

@@ -1,0 +1,471 @@
+/**
+ * Markdown 预览区样式（`.md-preview` 作用域）。
+ *
+ * 项目未接入 `@tailwindcss/typography`，故自建一套轻量排版：
+ *   - 浅色基线，`.dark` 下走深色变体（与 index.css 的设计令牌同源）；
+ *   - **绝不撑破容器**：代码块横向滚动、长单词 / URL 强制换行、图片限宽，
+ *     否则一个长 URL 就能把 280px 宽的便签窗口撑变形。
+ */
+
+.md-preview {
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ---------- 标题 ---------- */
+.md-preview > :first-child {
+  margin-top: 0;
+}
+
+.md-preview > :last-child {
+  margin-bottom: 0;
+}
+
+.md-preview h1,
+.md-preview h2,
+.md-preview h3,
+.md-preview h4,
+.md-preview h5,
+.md-preview h6 {
+  margin: 1.1em 0 0.5em;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.md-preview h1 {
+  font-size: 1.45em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.md-preview h2 {
+  font-size: 1.28em;
+  padding-bottom: 0.22em;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.md-preview h3 {
+  font-size: 1.14em;
+}
+
+.md-preview h4 {
+  font-size: 1em;
+}
+
+.md-preview h5 {
+  font-size: 0.92em;
+}
+
+.md-preview h6 {
+  font-size: 0.86em;
+  opacity: 0.75;
+}
+
+/* ---------- 段落 / 行内 ---------- */
+.md-preview p {
+  margin: 0.6em 0;
+}
+
+.md-preview strong {
+  font-weight: 650;
+}
+
+.md-preview em {
+  font-style: italic;
+}
+
+.md-preview del {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.md-preview a {
+  color: hsl(var(--primary));
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.md-preview a:hover {
+  border-bottom-color: currentColor;
+}
+
+.md-preview hr {
+  margin: 1em 0;
+  border: 0;
+  border-top: 1px solid hsl(var(--border));
+}
+
+/* ---------- 列表 ---------- */
+.md-preview ul,
+.md-preview ol {
+  margin: 0.55em 0;
+  padding-left: 1.4em;
+}
+
+.md-preview ul {
+  list-style: disc;
+}
+
+.md-preview ol {
+  list-style: decimal;
+}
+
+.md-preview ul ul {
+  list-style: circle;
+}
+
+.md-preview ul ul ul {
+  list-style: square;
+}
+
+.md-preview ol ol {
+  list-style: lower-alpha;
+}
+
+.md-preview li {
+  margin: 0.18em 0;
+}
+
+.md-preview li > ul,
+.md-preview li > ol {
+  margin: 0.18em 0;
+}
+
+/* GFM 任务列表：复选框只作展示，禁用交互（避免误改源文本语义） */
+.md-preview li input[type='checkbox'] {
+  margin-right: 0.4em;
+  vertical-align: -0.1em;
+  pointer-events: none;
+  accent-color: hsl(var(--primary));
+}
+
+.md-preview li:has(> input[type='checkbox']) {
+  list-style: none;
+  margin-left: -1.2em;
+}
+
+/* ---------- 引用 ---------- */
+.md-preview blockquote {
+  margin: 0.7em 0;
+  padding: 0.15em 0.85em;
+  border-left: 3px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.55);
+  border-radius: 0 4px 4px 0;
+  color: hsl(var(--muted-foreground));
+}
+
+.md-preview blockquote > :first-child {
+  margin-top: 0;
+}
+
+.md-preview blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- 代码 ---------- */
+.md-preview code {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.86em;
+  padding: 0.12em 0.36em;
+  border-radius: 4px;
+  background: hsl(var(--muted));
+  overflow-wrap: anywhere;
+}
+
+.md-preview pre {
+  margin: 0.7em 0;
+  padding: 0.7em 0.8em;
+  border-radius: 6px;
+  background: hsl(222 20% 16%);
+  color: hsl(210 20% 92%);
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.md-preview pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.82em;
+  line-height: 1.6;
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.dark .md-preview pre {
+  background: hsl(222 24% 9%);
+}
+
+/* ---------- 图片 ---------- */
+.md-preview img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.6em 0;
+  border-radius: 6px;
+}
+
+/* ---------- 表格 ---------- */
+.md-preview table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 0.7em 0;
+  border-collapse: collapse;
+  font-size: 0.92em;
+  overflow-x: auto;
+}
+
+.md-preview th,
+.md-preview td {
+  padding: 0.34em 0.62em;
+  border: 1px solid hsl(var(--border));
+  text-align: left;
+  vertical-align: top;
+}
+
+.md-preview th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+}
+
+.md-preview tbody tr:nth-child(even) {
+  background: hsl(var(--muted) / 0.4);
+}
+
+/* ---------- 空占位 ---------- */
+.md-preview-empty {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.6;
+}
+
+/* ---------- 行内内联态（`.md-inline`） ----------
+ *
+ * 用于「列表行里显示一段 Markdown」的场景（如待办标题）：渲染结果要**跟着行内排**，
+ * 不能变成块级段落把行撑开。故把段落与标题都压成 inline。
+ */
+
+.md-preview.md-inline {
+  display: block;
+  line-height: inherit;
+  font-size: inherit;
+  overflow-wrap: anywhere;
+}
+
+.md-preview.md-inline p,
+.md-preview.md-inline h1,
+.md-preview.md-inline h2,
+.md-preview.md-inline h3,
+.md-preview.md-inline h4,
+.md-preview.md-inline h5,
+.md-preview.md-inline h6 {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+
+.md-preview.md-inline h1,
+.md-preview.md-inline h2,
+.md-preview.md-inline h3 {
+  font-weight: 650;
+}
+
+/* 多段之间补一个空格，避免两段文字黏成一坨 */
+.md-preview.md-inline > * + *::before {
+  content: ' ';
+}
+
+.md-preview.md-inline code {
+  padding: 0.05em 0.28em;
+}
+
+.md-preview.md-inline ol,
+.md-preview.md-inline ul {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.md-preview.md-inline li {
+  display: inline;
+}
+
+.md-preview.md-inline li + li::before {
+  content: ' · ';
+  opacity: 0.5;
+}
+
+/* ---------- 所见即所得编辑态（`.md-preview.wysiwyg`） ----------
+ *
+ * 复用上面整套预览排版 —— 这正是「所见即所得」的关键：**编辑区和预览区同一套 CSS**，
+ * 因此不存在「编辑时一个样、预览时另一个样」的割裂感。这里只补「可编辑」特有行为。
+ */
+
+.md-preview.wysiwyg {
+  cursor: text;
+  min-height: 1.75em;
+  caret-color: hsl(var(--primary));
+}
+
+.md-preview.wysiwyg:focus,
+.md-preview.wysiwyg:focus-visible {
+  outline: none;
+}
+
+/* 编辑态下复选框可点（预览态刻意禁用），点一下就是完成任务项 */
+.md-preview.wysiwyg li input[type='checkbox'] {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* 空块（浏览器会塞 `<br>`）必须保住一行高度，否则光标「无处可站」 */
+.md-preview.wysiwyg p:empty,
+.md-preview.wysiwyg > div:empty,
+.md-preview.wysiwyg p:has(> br:only-child),
+.md-preview.wysiwyg > div:has(> br:only-child) {
+  min-height: 1.75em;
+  margin: 0.6em 0;
+}
+
+/* 编辑时标题不画底边线：那条线在排版上是分隔，在输入时只是干扰 */
+.md-preview.wysiwyg h1,
+.md-preview.wysiwyg h2 {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* 代码块在编辑态下不加暗底：暗底 + 光标在深色上很难看清，写代码时格外难受 */
+.md-preview.wysiwyg pre {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.md-preview.wysiwyg pre code {
+  color: inherit;
+  /* 编辑态软换行：便签窗通常不大，长命令硬撑出横向滚动条反而更难写 */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 桌面便签（`.note-markdown`） ----------
+ *
+ * 桌面便签的底是**暖色浅底**（琥珀便签纸），而上面整套 `.md-preview` 的颜色都走
+ * 主题令牌（`hsl(var(--foreground))` 等）。深色主题下 `--foreground` 是浅色 ——
+ * 于是便签会变成「白纸白字」，一个字都看不见。
+ *
+ * 因此这里把便签内部的 Markdown 配色**固定**成深色系。选择器写成
+ * `.note-markdown .md-preview`（两个类）以保证压过单类的 `.md-preview` 规则，
+ * 不依赖样式表的先后顺序。
+ */
+
+.note-markdown .md-preview {
+  color: #451a03;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  caret-color: #92400e;
+}
+
+.note-markdown .md-preview strong {
+  color: #3f1a02;
+}
+
+.note-markdown .md-preview h1,
+.note-markdown .md-preview h2 {
+  border-bottom-color: rgb(69 26 3 / 0.2);
+}
+
+.note-markdown .md-preview h6 {
+  opacity: 1;
+  color: rgb(69 26 3 / 0.7);
+}
+
+.note-markdown .md-preview a {
+  color: #1d4ed8;
+}
+
+.note-markdown .md-preview hr {
+  border-top-color: rgb(69 26 3 / 0.2);
+}
+
+/* 行内 `代码`（V67）
+ *
+ * ⚠️ 选择器必须是 `:not(pre) > code`，不能只写 `code` —— 旧写法会**同时命中
+ * `pre code`**，于是在代码块内部又套一层更深的底，看起来像两个盒子叠着。
+ * `pre` 的直接子节点由上面那条代码块规则负责。 */
+.note-markdown .md-preview :not(pre) > code {
+  background: rgb(255 255 255 / 0.55);
+  color: #7c2d12;
+  padding: 0.05em 0.32em;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgb(120 53 15 / 0.12);
+}
+
+.note-markdown .md-preview blockquote {
+  background: rgb(69 26 3 / 0.07);
+  border-left-color: rgb(69 26 3 / 0.25);
+  color: #78350f;
+}
+
+.note-markdown .md-preview th {
+  background: rgb(69 26 3 / 0.08);
+}
+
+.note-markdown .md-preview th,
+.note-markdown .md-preview td {
+  border-color: rgb(69 26 3 / 0.2);
+}
+
+.note-markdown .md-preview tbody tr:nth-child(even) {
+  background: rgb(69 26 3 / 0.04);
+}
+
+/* ---------- 便签里的代码块（V67 重做观感） ----------
+ *
+ * 用户 09-22 附截图：「便签 markdown 编辑器有问题 …… 而且样式很丑」—— 截图里那块代码
+ * 就是这里画的。旧样式只有一句 `background: rgb(69 26 3 / 0.08)`：一整条灰褐色实心块
+ * 横跨便签，配上 base 规则里偏大的内边距（0.7em×0.8em）与偏小的字号（0.82em），
+ * 观感像**一个坏掉的输入框**而不是代码 —— 便签里代码块通常只有一两行，越显突兀。
+ *
+ * 现在按「浅色代码贴纸」重画，与暖色便签纸同色系、但读得出来是代码：
+ *   · 底改**提亮**（半透明白）而不是压暗 —— 在纸上是「一张更白的纸条」；
+ *   · 左侧 3px 暖褐强调条 + 发丝描边（`box-shadow` 不占盒模型，不会挤动行宽）；
+ *   · 字号收到 0.95em（相对便签的 13px）并**同时钉住 `pre` 与 `code`**，
+ *     避免「pre 一层、code 又乘 0.82」的两次缩水（那正是字小得难看的根因）；
+ *   · 内边距收紧到 0.5em / 0.7em，圆角 8px 与卡片一致。
+ */
+.note-markdown .md-preview pre,
+.note-markdown .md-preview.wysiwyg pre {
+  background: rgb(255 255 255 / 0.62);
+  color: #3f1d05;
+  font-size: 0.95em;
+  padding: 0.5em 0.7em;
+  margin: 0.5em 0;
+  border-radius: 8px;
+  border-left: 3px solid rgb(120 53 15 / 0.32);
+  box-shadow: inset 0 0 0 1px rgb(120 53 15 / 0.12);
+}
+
+.note-markdown .md-preview pre code,
+.note-markdown .md-preview.wysiwyg pre code {
+  font-size: 1em;
+  line-height: 1.5;
+}
+
+/* 行内 `代码`：纸上那一小段也要看得出是代码，而不是一处高亮文字。
+ * （样式已并到上面那条 `:not(pre) > code` 规则里。） */
+
+/* 空内容占位（RichMarkdown 用一个 span 承载，颜色同样取自主题） */
+.note-markdown [class*='text-muted-foreground'] {
+  color: rgb(120 53 15 / 0.55);
+}
