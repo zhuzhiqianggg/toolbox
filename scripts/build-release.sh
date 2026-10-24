@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build-release.sh — Handy · 顺手 一键打包 + 部署（前端构建 + Rust 编译 + NSIS/MSI 安装包
+# build-release.sh — Toolbox 一键打包 + 部署（前端构建 + Rust 编译 + NSIS/MSI 安装包
 #                    + 自动取证 + 静默安装 + 启动核验）
 #
 # 用法（在 Git Bash 中；推荐用 PortableGit 完整路径的 bash.exe 运行，WorkBuddy 的 bash
@@ -13,12 +13,12 @@
 #   1) 前端用 node 直接调 vite/tsc 的 JS 入口；
 #   2) tauri build 的 beforeBuildCommand（默认 npm run build）用 --config 覆盖成占位命令，
 #      前端产物由本脚本先行构建；
-#   3) Rust 构建必须 source rust-env.sh 注入 MSVC 环境，否则缺 link.exe。
+#   3) Rust 构建必须先注入 MSVC 环境（source scripts/msvc-env.ps1 或等价方式），否则缺 link.exe。
 #
 # 部署阶段（默认开启）做四件事，每件都有取证，失败即中断：
 #   a) taskkill 停掉运行中的旧版（文件被占用时 NSIS 静默安装会悄悄失败）；
-#   b) NSIS /S 静默安装到 %LOCALAPPDATA%\Handy\；
-#   c) 核对安装后 handy.exe 的 mtime 必须**晚于安装前**（没变 = 没装上，立即报错）；
+#   b) NSIS /S 静默安装到 %LOCALAPPDATA%\Toolbox\；
+#   c) 核对安装后 toolbox.exe 的 mtime 必须**晚于安装前**（没变 = 没装上，立即报错）；
 #   d) 启动新装的主程序并用 tasklist 核验进程存活。
 set -euo pipefail
 
@@ -102,13 +102,13 @@ step "4/6 tauri build（Rust release 编译 + NSIS/MSI，最耗时的一步）"
 # —— 5. 取证 ——
 step "5/6 取证（exe 必须比 dist 新，否则前端没打进去）"
 DIST_TS=$(stat -c %Y dist/index.html)
-EXE="src-tauri/target/release/handy.exe"
+EXE="src-tauri/target/release/toolbox.exe"
 [ -f "$EXE" ] || { echo "FATAL: $EXE 不存在"; exit 1; }
 EXE_TS=$(stat -c %Y "$EXE")
 if [ "$EXE_TS" -ge "$DIST_TS" ]; then
-  echo "OK: handy.exe ($(date -d @$EXE_TS '+%H:%M:%S')) 晚于 dist/index.html ($(date -d @$DIST_TS '+%H:%M:%S'))"
+  echo "OK: toolbox.exe ($(date -d @$EXE_TS '+%H:%M:%S')) 晚于 dist/index.html ($(date -d @$DIST_TS '+%H:%M:%S'))"
 else
-  echo "FATAL: handy.exe 早于 dist/index.html —— 前端产物没打进 exe，拒绝继续部署"
+  echo "FATAL: toolbox.exe 早于 dist/index.html —— 前端产物没打进 exe，拒绝继续部署"
   exit 1
 fi
 
@@ -134,12 +134,12 @@ else
   echo "安装包：$INSTALLER"
 
   # a) 停旧版：文件被占用会让静默安装悄悄失败（exit 0 但啥都没装）
-  taskkill //IM handy.exe //F >/dev/null 2>&1 || true
+  taskkill //IM toolbox.exe //F >/dev/null 2>&1 || true
   sleep 1
 
   # LOCALAPPDATA 是 Windows 反斜杠路径，MSYS 下 stat 等工具对混合分隔符不稳，先归一化
   LOCALAPPDATA_U="$(cygpath -u "$LOCALAPPDATA" 2>/dev/null || echo "$LOCALAPPDATA")"
-  INSTALLED="$LOCALAPPDATA_U/Handy/handy.exe"
+  INSTALLED="$LOCALAPPDATA_U/Toolbox/toolbox.exe"
   if [ -f "$INSTALLED" ]; then
     BEFORE_TS=$(stat -c %Y "$INSTALLED")
   else
@@ -156,7 +156,7 @@ else
   if [ "$AFTER_TS" -gt "$BEFORE_TS" ]; then
     echo "OK: 已安装 $INSTALLED ($(date -d @$AFTER_TS '+%m-%d %H:%M:%S'))"
   else
-    echo "FATAL: 安装后 handy.exe mtime 未变化 —— 大概率被旧进程占用或安装器静默失败"
+    echo "FATAL: 安装后 toolbox.exe mtime 未变化 —— 大概率被旧进程占用或安装器静默失败"
     exit 1
   fi
 
@@ -166,15 +166,15 @@ else
   ALIVE=0
   for _ in 1 2 3; do
     sleep 2
-    if tasklist 2>/dev/null | grep -qi "handy.exe"; then
+    if tasklist 2>/dev/null | grep -qi "toolbox.exe"; then
       ALIVE=1
       break
     fi
   done
   if [ "$ALIVE" = "1" ]; then
-    echo "OK: Handy 已启动，进程存活"
+    echo "OK: Toolbox 已启动，进程存活"
   else
-    echo "WARN: tasklist 未检测到 handy.exe —— 若在 Agent 沙箱内运行属环境回收，请手动启动确认"
+    echo "WARN: tasklist 未检测到 toolbox.exe —— 若在 Agent 沙箱内运行属环境回收，请手动启动确认"
   fi
 fi
 

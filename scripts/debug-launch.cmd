@@ -1,3 +1,3 @@
 @echo off
-set HANDY_AUTOTOOL=password-generator
-start "" "D:\_Projects\ops\handy\src-tauri\target\release\handy.exe"
+set TOOLBOX_AUTOTOOL=password-generator
+start "" "D:\Personal\Projects\toolbox\src-tauri\target\release\toolbox.exe"

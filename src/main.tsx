@@ -46,14 +46,6 @@ function resolveWindow(search: string): WindowTarget {
   switch (raw) {
     case 'settings':
       return { windowRoot: 'settings' };
-    case 'organizer':
-      return { windowRoot: 'organizer' };
-    case 'grid-overlay':
-      // 桌面网格挂件透明窗（Rust `grid_overlay_show` 以 ?window=grid-overlay 创建）
-      return { windowRoot: 'grid-overlay' };
-    case 'workstation-bar':
-      // 常驻桌面顶部的工作台贴条（Rust `bar_show` 以 ?window=workstation-bar 创建）
-      return { windowRoot: 'workstation-bar' };
     default:
       return { windowRoot: 'main' };
   }
@@ -84,7 +76,7 @@ function start(): void {
   const target = resolveWindow(window.location.search);
 
   // 2.1) 诊断深链：`?tool=<commandId>` 直接进入指定工具，`?module=<moduleId>` 进入模块内页。
-  // 与 Rust 侧 `HANDY_AUTOTOOL` 通道互补——后者依赖 Tauri 事件，浏览器冒烟测试用不了 URL 通道。
+  // 与 Rust 侧 `TOOLBOX_AUTOTOOL` 通道互补——后者依赖 Tauri 事件，浏览器冒烟测试用不了 URL 通道。
   // 必须在首帧渲染前同步设置，避免先闪一帧命令面板。
   if (target.windowRoot === 'main') {
     const deepLink = new URLSearchParams(window.location.search);
@@ -100,19 +92,6 @@ function start(): void {
     // 工作台里的笔记 / 计划依赖 SQLite，浏览器预览下是空的 —— 没有这个入口就测不到该组件。
     if (deepLink.get('demo') === 'richmarkdown') {
       void import('./dev/RichMarkdownDemo').then(({ default: Demo }) => {
-        ReactDOM.createRoot(rootElement).render(
-          <React.StrictMode>
-            <Demo />
-          </React.StrictMode>,
-        );
-      });
-      return;
-    }
-
-    // 2.3) 开发调试入口 `?demo=calendar`：直接挂载桌面挂件日历做浏览器回归。
-    // 日历依赖 SQLite / Tauri 的地方都有 try/catch 兜底，浏览器下为空数据也不白屏。
-    if (deepLink.get('demo') === 'calendar') {
-      void import('./dev/CalendarDemo').then(({ default: Demo }) => {
         ReactDOM.createRoot(rootElement).render(
           <React.StrictMode>
             <Demo />
@@ -145,39 +124,18 @@ function start(): void {
     }),
   ])
     .then(() => {
-      // 贴条常驻：设置里开着就自动贴回桌面顶部（重启后依然可见，无需每次手点）
-      if (target.windowRoot === 'main' && useAppStore.getState().settings.barPinned) {
-        // bar_show 默认置顶；用户关过置顶就按设置纠正回来（贴条显隐 / 置顶两个开关互不干扰）
-        const onTop = useAppStore.getState().settings.barOnTop;
-        void ipc
-          .barShow()
-          .then(() => ipc.barSetPinned(onTop))
-          .catch(() => undefined);
-      }
       // 主窗口置顶：默认关，设置里开着才应用（否则会盖住系统弹框与其它软件）
       if (target.windowRoot === 'main' && useAppStore.getState().settings.mainPinned) {
         void ipc.appSetPinned(true).catch(() => undefined);
       }
     })
     .catch((error: unknown) => {
-      console.error('[Handy] 启动装配失败：', error);
+      console.error('[Toolbox] 启动装配失败：', error);
     });
 
-  // 3.1) 窗口形态设置（贴条显隐 / 主窗口置顶）的唯一驱动点：**只由主窗口**订阅。
-  // 贴条窗自己也跑本文件，若不判断窗口就会「自己叫自己」再创建一次窗口，故限定 main。
-  // 这样「工作台按钮 / 设置中心开关」都会经由同一路径生效，行为一致。
+  // 窗口形态设置（主窗口置顶）的唯一驱动点：**只由主窗口**订阅。
   if (target.windowRoot === 'main') {
     useAppStore.subscribe((state, prev) => {
-      if (state.settings.barPinned !== prev.settings.barPinned) {
-        const task = state.settings.barPinned
-          ? ipc.barShow().then(() => ipc.barSetPinned(state.settings.barOnTop))
-          : ipc.barHide();
-        void task.catch(() => undefined);
-      }
-      // 贴条置顶（与「贴条开着没有」独立的第二个开关）：设置中心改了就立刻作用到窗口
-      if (state.settings.barOnTop !== prev.settings.barOnTop) {
-        void ipc.barSetPinned(state.settings.barOnTop).catch(() => undefined);
-      }
       // 置顶默认关：开着才让主窗口浮在最上层（否则会盖住系统弹框 / 其它软件）
       if (state.settings.mainPinned !== prev.settings.mainPinned) {
         void ipc.appSetPinned(state.settings.mainPinned).catch(() => undefined);
@@ -185,7 +143,7 @@ function start(): void {
     });
   }
 
-  // 无头测试通道：Rust 侧 HANDY_AUTOTOOL 环境变量 → `autotool` 事件 → 自动打开
+  // 无头测试通道：Rust 侧 TOOLBOX_AUTOTOOL 环境变量 → `autotool` 事件 → 自动打开
   // 指定命令（`cmd-id`）或模块视图（`module:module-id`）。用于自动化诊断/回归。
   diagLog(`frontend boot root=${target.windowRoot}`);
   void import('@tauri-apps/api/event')
@@ -203,26 +161,6 @@ function start(): void {
     .then(() => {
       diagLog('autotool listener ready');
     })
-    .catch(() => {
-      /* 浏览器环境无 Tauri IPC，忽略 */
-    });
-
-  // 外部窗口 → 主窗口导航（如顶部贴条的「打开工作台」）：
-  // 视图状态是每窗口独立的，贴条改不了主窗口的 store，只能由 Rust 发事件、主窗口响应。
-  void import('@tauri-apps/api/event')
-    .then(({ listen }) =>
-      listen<string>('handy:navigate', (event) => {
-        const payload = event.payload;
-        diagLog(`navigate received: ${payload}`);
-        if (payload.startsWith('module:')) {
-          useAppStore.getState().setView({ kind: 'module', moduleId: payload.slice(7) });
-        } else if (payload === 'settings') {
-          useAppStore.getState().setView({ kind: 'settings' });
-        } else if (payload !== '') {
-          useAppStore.getState().setView({ kind: 'command', commandId: payload });
-        }
-      }),
-    )
     .catch(() => {
       /* 浏览器环境无 Tauri IPC，忽略 */
     });

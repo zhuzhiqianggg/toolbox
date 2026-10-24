@@ -209,7 +209,7 @@ export function digestsToText(
   sourceLabel: string,
 ): string {
   const lines: string[] = [
-    '# Handy 哈希计算结果',
+    '# Toolbox 哈希计算结果',
     `# 来源：${sourceLabel}`,
     `# 时间：${new Date().toLocaleString('zh-CN')}`,
     '',

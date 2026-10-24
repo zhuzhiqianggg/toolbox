@@ -3,7 +3,7 @@
  *
  * 设计约定（本期范围）：
  *   - **不新增 Rust 命令、不新增 SQLite 表**：快捷入口是纯前端配置项，
- *     以 `handy.workstation.quicklinks.v1` 为键存入 localStorage；
+ *     以 `toolbox.workstation.quicklinks.v1` 为键存入 localStorage；
  *   - 打开动作走 `ipc.shellOpen`（tauri-plugin-shell `open`，capabilities 已授予
  *     `shell:allow-open`），失败由调用方提示（默认作用域仅放行 http(s)/mailto/tel）；
  *   - 结构化校验：读取时逐条过滤非法数据，避免脏数据导致渲染崩溃。
@@ -26,7 +26,7 @@ export interface QuickLink {
 }
 
 /** localStorage 键（版本化，结构变更时递增） */
-export const QUICKLINKS_STORAGE_KEY = 'handy.workstation.quicklinks.v1';
+export const QUICKLINKS_STORAGE_KEY = 'toolbox.workstation.quicklinks.v1';
 
 /** 依据输入值推断类型：http(s) 前缀视为网址，其余视为本地路径 */
 export function detectQuickLinkType(value: string): QuickLinkType {

@@ -35,11 +35,11 @@ export default function NoteListView(_props: NoteListViewProps = {}): React.JSX.
       .getState()
       .createNote()
       .then((note) => openNoteWindow(note.id))
-      .catch((err: unknown) => console.error('[Handy] 新建便签失败：', err));
+      .catch((err: unknown) => console.error('[Toolbox] 新建便签失败：', err));
   };
 
   const handleOpen = (id: string): void => {
-    void openNoteWindow(id).catch((err: unknown) => console.error('[Handy] 打开便签失败：', err));
+    void openNoteWindow(id).catch((err: unknown) => console.error('[Toolbox] 打开便签失败：', err));
   };
 
   const handleTogglePin = (id: string): void => {

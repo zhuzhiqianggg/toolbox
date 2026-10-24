@@ -6,21 +6,12 @@ import { ModuleView } from './components/ModuleView';
 import { SettingsCenter } from './components/SettingsCenter';
 import { useAppStore, type MainView } from '@/stores/useAppStore';
 import { NoteWindow } from '@/modules/notes/NoteWindow';
-import { GridOverlay } from '@/modules/desktop-grid/GridOverlay';
-import { WorkstationBar } from '@/modules/workstation/WorkstationBar';
 import { ReminderScheduler } from '@/modules/todos/ReminderScheduler';
 import { useTheme } from '@/hooks/useTheme';
 import { applyViewSize, initWindowShell } from '@/lib/windowShell';
 
 /** 可挂载的窗口根类型（与 Rust 侧 WindowKind 对应） */
-export type WindowRoot =
-  | 'main'
-  | 'note'
-  | 'settings'
-  | 'organizer'
-  | 'grid-overlay'
-  /** 常驻桌面顶部的「工作台贴条」（Rust `commands/bar.rs` 创建） */
-  | 'workstation-bar';
+export type WindowRoot = 'main' | 'note' | 'settings';
 
 export interface AppProps {
   /** 由 main.tsx 依据 ?window= 参数注入 */
@@ -111,31 +102,11 @@ const App: FC<AppProps> = ({ windowRoot = 'main', noteId }) => {
     return <NoteWindow noteId={noteId} />;
   }
 
-  // 桌面网格挂件透明窗（grid）：全窗即挂件画布，点击穿透/交互切换由 Rust 光标轮询协同
-  //
-  // V63：这里也要挂 `ReminderScheduler`。它原本只在主窗口里，而主窗口从 V44 起就不
-  // 再自启、V63 起连托盘入口也改成了面板 —— 等于「待办提醒永远不会响」。挂件窗是
-  // **常驻**的（收起整理也只收内容不关窗），且调度器自己返回 `null`（无 UI、直接读库、
-  // 靠 `reminded` 去重），挂在这里既不多个界面，也不重复提醒。
-  if (windowRoot === 'grid-overlay') {
-    return (
-      <>
-        <ReminderScheduler />
-        <GridOverlay />
-      </>
-    );
-  }
-
-  // 工作台顶部贴条：常驻桌面顶部的一行今日概览（无边框 / 透明 / 置顶）
-  if (windowRoot === 'workstation-bar') {
-    return <WorkstationBar />;
-  }
-
   if (windowRoot !== 'main') {
     return (
       <AppLayout showSidebar={false}>
         <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-          <p className="text-lg font-medium text-foreground">Handy · 顺手</p>
+          <p className="text-lg font-medium text-foreground">Toolbox</p>
           <p className="text-sm text-muted-foreground">
             「{windowRoot}」窗口将在后续版本接入。
           </p>

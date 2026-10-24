@@ -1,14 +1,14 @@
 //! 备份导入导出（M7，V13）。
 //!
-//! 备份产物：`<用户选定目录>/handy-backup-YYYYMMDD-HHmmss/`，内含
-//! `handy.db`（经 `VACUUM INTO` 生成的一致性快照，规避 SQLite 在线复制风险）与
+//! 备份产物：`<用户选定目录>/toolbox-backup-YYYYMMDD-HHmmss/`，内含
+//! `toolbox.db`（经 `VACUUM INTO` 生成的一致性快照，规避 SQLite 在线复制风险）与
 //! `settings.json`（应用配置镜像，含模块开关 / 收藏 / 最近）。
 //!
 //! 导入策略（**不在线热替换**）：
-//!   1. 校验源目录文件齐全（handy.db + settings.json）；
+//!   1. 校验源目录文件齐全（toolbox.db + settings.json）；
 //!   2. 写入 pending 标记（`import-pending.json`）并返回「重启应用生效」；
 //!   3. 下次启动在 `db::init` **之前**由 `apply_pending_import` 执行替换
-//!      （覆盖 handy.db 并清除旧 WAL/SHM 残留、覆盖 settings.json、删除标记）。
+//!      （覆盖 toolbox.db 并清除旧 WAL/SHM 残留、覆盖 settings.json、删除标记）。
 //!
 //! 安全边界：导出 / 导入的目标目录均由用户经系统 dialog 选择后传入；本模块的一切
 //! 自动化测试只在 TEMP 沙箱内进行，**绝不**触碰真实用户目录。
@@ -24,7 +24,7 @@ use crate::db;
 /// 配置存储文件名（与 `commands/app.rs` 一致）。
 const SETTINGS_STORE_FILE: &str = "settings.json";
 /// 数据库文件名（与 `db::DB_FILE` 一致，显式声明便于独立测试）。
-const DB_FILE: &str = "handy.db";
+const DB_FILE: &str = "toolbox.db";
 /// 导入待执行标记（app_config_dir 下）。
 pub(crate) const IMPORT_MARKER: &str = "import-pending.json";
 
@@ -68,7 +68,7 @@ pub(crate) fn export_backup(
     if !db_path.exists() {
         return Err(format!("数据库文件不存在：{}", db_path.display()));
     }
-    let backup_dir = target_root.join(format!("handy-backup-{}", stamp_dir_name()));
+    let backup_dir = target_root.join(format!("toolbox-backup-{}", stamp_dir_name()));
     std::fs::create_dir_all(&backup_dir)
         .map_err(|err| format!("创建备份目录失败（{}）：{err}", backup_dir.display()))?;
 
@@ -203,7 +203,7 @@ mod tests {
         use std::sync::atomic::{AtomicUsize, Ordering};
         static SEQ: AtomicUsize = AtomicUsize::new(0);
         let n = SEQ.fetch_add(1, Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("handy-backup-test-{}-{tag}-{n}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("toolbox-backup-test-{}-{tag}-{n}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
@@ -247,7 +247,7 @@ mod tests {
         // —— 导出 ——
         let report = export_backup(&db_path, &settings_path, &target_root).unwrap();
         assert_eq!(report.files.len(), 2);
-        assert!(report.backup_dir.contains("handy-backup-"));
+        assert!(report.backup_dir.contains("toolbox-backup-"));
         let backup_dir = Path::new(&report.backup_dir);
         assert!(backup_dir.join(DB_FILE).exists());
         assert!(backup_dir.join(SETTINGS_STORE_FILE).exists());

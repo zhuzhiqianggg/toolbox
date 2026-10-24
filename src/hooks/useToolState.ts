@@ -32,7 +32,7 @@ import * as React from 'react';
  */
 
 /** 存储键前缀（带应用名，避免与同源其它数据撞键） */
-const PREFIX = 'handy.tool.';
+const PREFIX = 'toolbox.tool.';
 
 /** 单工具单次写入上限（约 256KB 字符） */
 const MAX_BYTES = 256 * 1024;

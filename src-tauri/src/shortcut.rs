@@ -17,7 +17,7 @@ use tauri_plugin_store::StoreExt;
 
 
 /// 快捷键呼出事件名（前端 `useHotkeyOpen` 监听）。
-pub const HOTKEY_OPEN_EVENT: &str = "handy://hotkey-open";
+pub const HOTKEY_OPEN_EVENT: &str = "toolbox://hotkey-open";
 
 /// 配置存储文件名 / 键（与 `commands/app.rs` 一致）。
 const SETTINGS_STORE: &str = "settings.json";
@@ -43,12 +43,8 @@ fn now_ms() -> i64 {
 /// 快捷键触发回调（首次注册与重注册共用）。
 fn on_hotkey_pressed(app: &AppHandle, _shortcut: &Shortcut, event: ShortcutEvent) {
     if event.state() == ShortcutState::Pressed {
-        // V63：全局快捷键呼出的是**桌面右侧面板**，不是独立主窗口（用户：「工具线弹出框
-        // 就够了吧」）。面板的开关状态只有前端知道，所以这里只派发「切换」动作。
-        crate::commands::grid::dispatch_panel_action(
-            app,
-            crate::commands::grid::PANEL_ACTION_TOGGLE_TOOLS,
-        );
+        // 全局快捷键呼出主窗口（Toolbox：普通窗口应用，无桌面面板概念）
+        let _ = crate::window::toggle_main_palette(app);
         // 广播事件，供前端聚焦并清空搜索框
         let _ = app.emit(HOTKEY_OPEN_EVENT, serde_json::json!({ "at": now_ms() }));
     }
@@ -98,7 +94,7 @@ pub fn register_from_settings(app: &AppHandle) -> Result<(), String> {
         match parse_hotkey(&hotkey).and_then(|sc| register(app, sc)) {
             Ok(()) => return Ok(()),
             Err(err) => {
-                eprintln!("[Handy] 已保存快捷键「{hotkey}」注册失败（{err}），回退默认键");
+                eprintln!("[Toolbox] 已保存快捷键「{hotkey}」注册失败（{err}），回退默认键");
             }
         }
     }

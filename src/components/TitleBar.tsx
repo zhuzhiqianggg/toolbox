@@ -64,7 +64,7 @@ export function TitleBar(): React.JSX.Element | null {
         data-tauri-drag-region
         className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground"
       >
-        Handy · 顺手
+        Toolbox
       </span>
       <div className="flex shrink-0 items-center">
         <button

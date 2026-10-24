@@ -211,7 +211,7 @@ ok(
  * ================================================================== */
 
 const text = digestsToText({ MD5: 'a'.repeat(32), 'SHA-256': 'b'.repeat(64) }, '文本');
-ok('导出含标题行', text.includes('# Handy 哈希计算结果'), text.split('\n')[0]);
+ok('导出含标题行', text.includes('# Toolbox 哈希计算结果'), text.split('\n')[0]);
 ok('导出含来源行', text.includes('# 来源：文本'));
 ok('导出只列有值的算法', text.includes('MD5') && text.includes('SHA-256') && !text.includes('SHA-512'));
 ok('导出时算法名对齐（padEnd 8）', /^SHA-256\s{1}b{64}$/m.test(text), text.split('\n').at(-1));

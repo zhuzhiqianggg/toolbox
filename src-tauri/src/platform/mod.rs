@@ -9,22 +9,15 @@ use tauri::AppHandle;
 #[cfg(target_os = "windows")]
 mod windows;
 
-/// Windows 原生 Shell 右键菜单（V43）。macOS 走 Finder 的菜单，另行适配。
+/// 桌面图标显隐自愈：历史版本曾接管桌面（隐藏系统图标），本模块在启动时兜底还回去。
 #[cfg(target_os = "windows")]
-pub mod shell_menu;
-
-/// 桌面背景右键菜单入口（V45，借鉴腾讯桌面整理）：HKCU 注册表，无需管理员权限。
-pub mod desktop_menu;
-
-/// 系统菜单期间把桌面「暂时还给系统」（V81）：旁听菜单弹出 / 收起，不改鼠标路由。
-#[cfg(target_os = "windows")]
-pub mod desktop_handoff;
+pub mod desktop_icons;
 
 #[cfg(target_os = "macos")]
 mod macos;
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-compile_error!("Handy · 顺手 目前仅支持 Windows 与 macOS 平台");
+compile_error!("Toolbox 目前仅支持 Windows 与 macOS 平台");
 
 /// 平台能力清单（供前端做降级展示 / 授权引导）。
 #[derive(Debug, Clone, Serialize)]

@@ -291,7 +291,7 @@ export function QrCodeGenerator({ initialInput = '' }: CommandProps): React.JSX.
     try {
       const anchor = document.createElement('a');
       anchor.href = canvas.toDataURL('image/png');
-      anchor.download = `handy-qrcode-${size}-${Date.now()}.png`;
+      anchor.download = `toolbox-qrcode-${size}-${Date.now()}.png`;
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
@@ -388,7 +388,7 @@ export function QrCodeGenerator({ initialInput = '' }: CommandProps): React.JSX.
           description: '最基础的文本码：默认 256px、容错 M',
           apply: () => {
             setTemplate('text');
-            setText('Handy 顺手 · 方便，而非全面');
+            setText('Toolbox 顺手 · 方便，而非全面');
           },
         },
         {
@@ -404,7 +404,7 @@ export function QrCodeGenerator({ initialInput = '' }: CommandProps): React.JSX.
           description: '扫码直接连网 —— 注意密码栏不进草稿存储，只活在当前会话',
           apply: () => {
             setTemplate('wifi');
-            setSsid('Handy-Guest');
+            setSsid('Toolbox-Guest');
             setEncryption('WPA');
             setHidden(false);
           },
@@ -453,7 +453,7 @@ export function QrCodeGenerator({ initialInput = '' }: CommandProps): React.JSX.
                 autoFocus
                 value={text}
                 onChange={(event) => setText(event.target.value)}
-                placeholder="输入任意文本，如 Hello Handy"
+                placeholder="输入任意文本，如 Hello Toolbox"
                 className={
                   'h-[120px] w-full resize-none rounded-lg border border-input bg-background p-3 text-sm ' +
                   'text-foreground placeholder:text-muted-foreground ' +

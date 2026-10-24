@@ -155,7 +155,6 @@ const APP_SHORTCUTS: ReadonlyArray<{ target: string; name: string; description: 
   { target: 'module:notes', name: '工作台', description: '日历 · 任务 · 便签 · 快捷入口', icon: LayoutGrid },
   { target: 'module:toolbox', name: '工具箱', description: '25 个本地小工具（对比 / Cron / 正则 / 编码…）', icon: Wrench },
   { target: 'vault', name: '密码存储器', description: 'AES-256-GCM 加密的本地密码库', icon: ShieldCheck },
-  { target: 'module:desktop-organizer', name: '桌面整理', description: '一键整理桌面 · 布局备份还原', icon: AppWindow },
 ];
 
 /** 栏内单个图标按钮的固定边长（与 `h-11 w-11` 一致） */
@@ -295,7 +294,7 @@ export function QuickActionsRail(): React.JSX.Element {
   const load = useCallback((): void => {
     if (!isTauri()) {
       setLoading(false);
-      setNotice('系统快捷入口需在 Handy 桌面应用内运行');
+      setNotice('系统快捷入口需在 Toolbox 桌面应用内运行');
       return;
     }
     setLoading(true);

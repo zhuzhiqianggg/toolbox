@@ -33,7 +33,7 @@ export function openSettings(): void {
 /**
  * 通用导航（V45）：把「导航目标字符串」解析成对应视图。
  *
- * 支持三种 target，与 Rust `desktop_open_view` 的载荷、主窗口 `handy:navigate`
+ * 支持三种 target，与 Rust `desktop_open_view` 的载荷、主窗口 `toolbox:navigate`
  * 的解析规则**完全一致**（三处语义必须同步，否则桌面点一下会开到别的地方）：
  *   - `module:<id>` → 模块面板内页（如 `module:notes` = 工作台）；
  *   - `settings`    → 设置中心；

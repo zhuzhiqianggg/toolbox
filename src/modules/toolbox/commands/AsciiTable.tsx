@@ -116,7 +116,7 @@ export function AsciiTable({ initialInput = '' }: CommandProps): React.JSX.Eleme
         {
           label: '中英混排',
           description: 'ASCII 与多字节字符同框 —— 一眼看清「中文占 2 字节以上」到底长什么样',
-          apply: () => setInput('Handy 顺手 2026'),
+          apply: () => setInput('Toolbox 顺手 2026'),
         },
         {
           label: 'Emoji（代理对）',
@@ -136,7 +136,7 @@ export function AsciiTable({ initialInput = '' }: CommandProps): React.JSX.Eleme
         {
           label: 'HTTP 报文头',
           description: '真实报文片段（含 CRLF）—— 从字节层面看为什么「多了一个空行就解析失败」',
-          apply: () => setInput('GET / HTTP/1.1\r\nHost: handy.local\r\n\r\n'),
+          apply: () => setInput('GET / HTTP/1.1\r\nHost: toolbox.local\r\n\r\n'),
         },
       ]}
     >

@@ -17,7 +17,7 @@ interface KvBackend {
   remove(key: string): Promise<void>;
 }
 
-const LS_PREFIX = 'handy:';
+const LS_PREFIX = 'toolbox:';
 
 /** 浏览器降级后端：localStorage（同步 API 包装为 Promise） */
 const localStorageBackend: KvBackend = {

@@ -236,7 +236,7 @@ export function ApiTester({ initialInput }: CommandProps): React.JSX.Element {
           { key: 'Content-Type', value: 'application/json' },
           { key: 'Accept', value: 'application/json' },
         ]);
-        setBody('{\n  "title": "来自 Handy 接口测试",\n  "body": "请求体示例",\n  "userId": 1\n}');
+        setBody('{\n  "title": "来自 Toolbox 接口测试",\n  "body": "请求体示例",\n  "userId": 1\n}');
       },
     },
     {
@@ -244,10 +244,10 @@ export function ApiTester({ initialInput }: CommandProps): React.JSX.Element {
       description: 'httpbin 把你发的头原样返回 —— 调 Authorization / 自定义头是否真发出去',
       apply: () => {
         setMethod('GET');
-        setUrl('https://httpbin.org/get?tool=handy');
+        setUrl('https://httpbin.org/get?tool=toolbox');
         updateHeaders([
           { key: 'Accept', value: 'application/json' },
-          { key: 'X-From', value: 'Handy 接口测试' },
+          { key: 'X-From', value: 'Toolbox 接口测试' },
         ]);
       },
     },
@@ -290,7 +290,7 @@ export function ApiTester({ initialInput }: CommandProps): React.JSX.Element {
       apply: () => {
         setCurlOpen(true);
         setCurlText(
-          "curl -X POST 'https://httpbin.org/post' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer demo-token' \\\n  -d '{\"name\":\"handy\",\"tags\":[\"api\",\"test\"]}'",
+          "curl -X POST 'https://httpbin.org/post' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer demo-token' \\\n  -d '{\"name\":\"toolbox\",\"tags\":[\"api\",\"test\"]}'",
         );
       },
     },
@@ -473,7 +473,7 @@ export function ApiTester({ initialInput }: CommandProps): React.JSX.Element {
             className={TEXTAREA_CLASS}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder={'{\n  "name": "handy",\n  "count": 1\n}'}
+            placeholder={'{\n  "name": "toolbox",\n  "count": 1\n}'}
           />
         </div>
 

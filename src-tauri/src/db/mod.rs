@@ -1,8 +1,8 @@
 //! SQLite 主数据层（ARCHITECTURE ADR-7）。
 //!
 //! 职责：
-//!   - 解析数据库路径（`app_config_dir()/handy.db`，**必须**与 `tauri.conf.json` 中
-//!     `plugins.sql.preload = ["sqlite:handy.db"]` 的解析基准一致，二者才能访问同一文件）；
+//!   - 解析数据库路径（`app_config_dir()/toolbox.db`，**必须**与 `tauri.conf.json` 中
+//!     `plugins.sql.preload = ["sqlite:toolbox.db"]` 的解析基准一致，二者才能访问同一文件）；
 //!   - 打开连接并设置 WAL / 外键约束（崩溃一致性、局部更新）；
 //!   - 执行版本化迁移（见 [`migrations`]）。
 //!
@@ -15,10 +15,10 @@ use std::path::{Path, PathBuf};
 use rusqlite::Connection;
 use tauri::{AppHandle, Manager};
 
-/// 数据库文件名。须与 `tauri.conf.json` → `plugins.sql.preload` 的 `sqlite:handy.db` 一致。
-pub const DB_FILE: &str = "handy.db";
+/// 数据库文件名。须与 `tauri.conf.json` → `plugins.sql.preload` 的 `sqlite:toolbox.db` 一致。
+pub const DB_FILE: &str = "toolbox.db";
 
-/// 解析数据库绝对路径（`app_config_dir()/handy.db`）。
+/// 解析数据库绝对路径（`app_config_dir()/toolbox.db`）。
 ///
 /// 说明：`tauri-plugin-sql` 的 sqlite 连接以 `app_config_dir()` 为基准解析 `sqlite:<相对名>`，
 /// 因此此处使用同一基准，避免出现「插件写 A 库、Rust 写 B 库」的分裂。

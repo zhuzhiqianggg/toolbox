@@ -1,7 +1,7 @@
 //! 统一日志：客户端操作与应用错误都落盘，让「用户测出问题 → 回传日志 → 定位」
 //! 这条链路真的走得通（V37 起）。
 //!
-//! - 落点 `%LOCALAPPDATA%\Handy\handy.log`（与 `grid-debug.log` 同一目录，用户好找）；
+//! - 落点 `%LOCALAPPDATA%\Toolbox\toolbox.log`（与 `grid-debug.log` 同一目录，用户好找）；
 //! - 单份超过 [`MAX_BYTES`] 自动轮转，只保留最近 [`KEEP`] 份 —— 永不无限增长；
 //! - 前端错误、IPC 失败、收纳/移动/删除等**写操作**都要在这里留痕：V36 那次
 //!   「桌面文件被复制成 5 份」之所以只能靠事后翻磁盘才查清，就是因为关键写操作
@@ -11,16 +11,16 @@ use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 
 /// 日志文件名。
-pub const FILE_NAME: &str = "handy.log";
+pub const FILE_NAME: &str = "toolbox.log";
 const LEGACY_FILE_NAME: &str = "grid-debug.log";
 /// 单份日志大小上限（超过即轮转）。
 const MAX_BYTES: u64 = 2 * 1024 * 1024;
-/// 轮转后保留的份数（`handy.log.1` … `handy.log.N`）。
+/// 轮转后保留的份数（`toolbox.log.1` … `toolbox.log.N`）。
 const KEEP: u32 = 3;
 
-/// 日志目录（`%LOCALAPPDATA%\Handy`）。
+/// 日志目录（`%LOCALAPPDATA%\Toolbox`）。
 pub fn log_dir() -> Option<PathBuf> {
-    dirs::data_local_dir().map(|base| base.join("Handy"))
+    dirs::data_local_dir().map(|base| base.join("Toolbox"))
 }
 
 /// 当前日志文件路径。
@@ -37,7 +37,7 @@ pub fn timestamp() -> String {
 ///
 /// 一律不返回错误、不 panic —— 日志写不进去也绝不能影响主流程。
 pub fn write_line(category: &str, message: &str) {
-    // 单测里不落盘（V40）：`cargo test` 会跑到用户真实目录的 handy.log 里插进一堆
+    // 单测里不落盘（V40）：`cargo test` 会跑到用户真实目录的 toolbox.log 里插进一堆
     // 测试行，而这条日志是**故障复盘的事实源** —— 掺进假的「整理布局 / 接管图标」记录，
     // 下次排查真问题时就会被误导。测试只关心返回值，不关心日志。
     if cfg!(test) {
@@ -52,7 +52,7 @@ pub fn write_line(category: &str, message: &str) {
             let _ = file.write_all(line.as_bytes());
         }
     }
-    println!("[Handy][{category}] {message}");
+    println!("[Toolbox][{category}] {message}");
 }
 
 /// 记录一次失败（带上下文），统一格式方便回传后一眼看出谁挂了。
@@ -64,11 +64,11 @@ pub fn write_error(category: &str, context: &str, detail: &str) {
 pub fn start_session(version: &str) {
     write_line(
         "app",
-        &format!("──────── 启动 Handy {version} ────────"),
+        &format!("──────── 启动 Toolbox {version} ────────"),
     );
 }
 
-/// 超过上限就把 `handy.log` → `.1` → `.2` …，最老的一份丢掉。
+/// 超过上限就把 `toolbox.log` → `.1` → `.2` …，最老的一份丢掉。
 fn rotate_if_needed(path: &Path) {
     let Ok(meta) = std::fs::metadata(path) else {
         return;
@@ -206,7 +206,7 @@ pub async fn log_info() -> Result<LogInfo, String> {
 
 /// 旧日志文件名（V36 及之前只写 `grid-debug.log`）。
 ///
-/// 保留这个常量只为在日志里提示用户「老日志在哪」——V37 起所有内容都写 `handy.log`，
+/// 保留这个常量只为在日志里提示用户「老日志在哪」——V37 起所有内容都写 `toolbox.log`，
 /// 设置页不再区分，避免用户找两份文件。
 pub fn legacy_log_path() -> Option<PathBuf> {
     log_dir().map(|dir| dir.join(LEGACY_FILE_NAME))

@@ -453,21 +453,21 @@ export async function verifyJwtSignature(
 }
 
 /** 示例 Token 使用的演示密钥（填入密钥框即可看到「验证通过」） */
-export const SAMPLE_SECRET = 'handy-demo-secret';
+export const SAMPLE_SECRET = 'toolbox-demo-secret';
 
 /** 示例载荷（正常 / 已过期） */
 function buildSamplePayload(expired: boolean, now: number): JwtPayload {
   const iat = expired ? Math.floor(now / 1000) - 7200 : Math.floor(now / 1000);
   const exp = expired ? Math.floor(now / 1000) - 3600 : Math.floor(now / 1000) + 7 * 24 * 3600;
   return {
-    iss: 'https://handy.local',
+    iss: 'https://toolbox.local',
     sub: 'user-10086',
-    aud: 'handy-desktop',
+    aud: 'toolbox-desktop',
     jti: expired ? 'demo-expired-0001' : 'demo-active-0001',
     iat,
     nbf: iat,
     exp,
-    name: 'Handy 示例用户',
+    name: 'Toolbox 示例用户',
     roles: ['admin', 'editor'],
   };
 }
@@ -506,7 +506,7 @@ export async function buildSampleToken(expired: boolean): Promise<string> {
   }
   if (signatureSegment.length === 0) {
     // 占位签名：外形合法，验签会失败（这是预期行为）
-    signatureSegment = stringToBase64Url(`handy-demo-signature-${now}-${expired ? 'expired' : 'active'}`);
+    signatureSegment = stringToBase64Url(`toolbox-demo-signature-${now}-${expired ? 'expired' : 'active'}`);
   }
   return `${signingInput}.${signatureSegment}`;
 }

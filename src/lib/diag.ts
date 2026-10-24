@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 
 /**
  * 诊断上报：双通道。
- * 1. 自定义命令 `debug_log`（走 Rust log 门面 → Handy.log）；
+ * 1. 自定义命令 `debug_log`（走 Rust log 门面 → Toolbox.log）；
  * 2. HTTP beacon 到本地收集器（9321，不依赖 Tauri IPC —— 当 invoke 通道整体
  *    失效时仍可拿到诊断；收集器未启动时静默失败）。
  * 诊断逻辑绝不反噬主流程：全部 catch 忽略。
@@ -31,7 +31,7 @@ const LOAD_TIMEOUT_MS = 10_000;
 
 /**
  * 惰性加载守卫：给 `import()` 动态加载加 START/OK/FAIL 诊断与超时兜底。
- * - 全程写 Handy.log（`[diag]` 前缀），桌面端加载卡死可直接看日志定位；
+ * - 全程写 Toolbox.log（`[diag]` 前缀），桌面端加载卡死可直接看日志定位；
  * - 超时（默认 10s）自动 reject，避免「正在加载…」永久转圈。
  */
 export function guardLoad<T extends { default: unknown }>(

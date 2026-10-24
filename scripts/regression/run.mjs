@@ -36,14 +36,6 @@ const SUITES = [
   'test-json-locate.mjs',
   // V28：接口测试底层（cURL 解析 / 头部装配 / 响应格式化）
   'test-api.mjs',
-  // V49：智能桌面整理 · 归组与盒内排序引擎
-  'test-smart-arrange.mjs',
-  // V56：桌面格子前后端布局常量交叉校验（标题栏高 / 竖条宽 / 入口宽 = 日历宽 …）
-  'test-desktop-constants.mjs',
-  // V58：原生右键菜单不许改行为（flags 按 Explorer 传 / 转发 WM_INITMENUPOPUP / Shift 让回系统）
-  'test-shell-menu.mjs',
-  // V59：内部拖拽必须是指针拖拽（HTML5 拖放在挂件窗里被 wry 判死）+ 盒子高度必须绑引擎值
-  'test-drag-pointer.mjs',
 ];
 
 let failed = 0;

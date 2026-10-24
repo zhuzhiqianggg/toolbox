@@ -247,7 +247,7 @@ export function computeUrlStats(input: string): UrlStats {
 export const URL_EXAMPLES: ReadonlyArray<{ label: string; value: string }> = [
   {
     label: '普通 URL',
-    value: 'https://example.com/docs/getting-started?ref=handy#section-2',
+    value: 'https://example.com/docs/getting-started?ref=toolbox#section-2',
   },
   {
     label: '中文 URL',

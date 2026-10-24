@@ -990,12 +990,12 @@ export function TextDiff({ initialInput = '' }: CommandProps): React.JSX.Element
             patch({
               textA: `server {
   listen 80;
-  server_name handy.local;
+  server_name toolbox.local;
   root /var/www;
 }`,
               textB: `server {
   listen 8080;
-  server_name handy.local;
+  server_name toolbox.local;
   gzip on;
   root /var/www;
 }`,
@@ -1441,7 +1441,7 @@ export function TextDiff({ initialInput = '' }: CommandProps): React.JSX.Element
                   size="sm"
                   variant="ghost"
                   className="h-7 px-2 text-xs"
-                  onClick={() => downloadFile('handy-diff-merged.txt', merged)}
+                  onClick={() => downloadFile('toolbox-diff-merged.txt', merged)}
                 >
                   下载合并结果
                 </Button>
@@ -1458,18 +1458,18 @@ export function TextDiff({ initialInput = '' }: CommandProps): React.JSX.Element
 
         {/* ——— 底部操作 ——— */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => downloadFile('handy-diff-left.txt', normalizedA)}>
+          <Button size="sm" variant="outline" onClick={() => downloadFile('toolbox-diff-left.txt', normalizedA)}>
             <Download className="h-3.5 w-3.5" />
             下载左侧
           </Button>
-          <Button size="sm" variant="outline" onClick={() => downloadFile('handy-diff-right.txt', normalizedB)}>
+          <Button size="sm" variant="outline" onClick={() => downloadFile('toolbox-diff-right.txt', normalizedB)}>
             <Download className="h-3.5 w-3.5" />
             下载右侧
           </Button>
           <Button
             size="sm"
             variant="outline"
-            onClick={() => downloadFile('handy-diff.patch', unified)}
+            onClick={() => downloadFile('toolbox-diff.patch', unified)}
             disabled={rows === null}
           >
             <Download className="h-3.5 w-3.5" />

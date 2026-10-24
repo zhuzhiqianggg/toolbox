@@ -32,7 +32,7 @@ export interface UseToolHistoryResult<T> {
 }
 
 /** localStorage key 前缀（后缀 `.v1` 预留结构升级空间）。 */
-const STORAGE_KEY_PREFIX = 'handy.tool.history.';
+const STORAGE_KEY_PREFIX = 'toolbox.tool.history.';
 const STORAGE_KEY_SUFFIX = '.v1';
 /** 默认历史上限。 */
 const DEFAULT_LIMIT = 20;
@@ -59,7 +59,7 @@ function resolveStorage(): Storage | null {
       cachedStorage = null;
       return cachedStorage;
     }
-    const probeKey = '__handy_history_probe__';
+    const probeKey = '__toolbox_history_probe__';
     candidate.setItem(probeKey, '1');
     candidate.removeItem(probeKey);
     cachedStorage = candidate;
@@ -121,7 +121,7 @@ function parseEntries(raw: string | null): Array<ToolHistoryEntry<unknown>> {
 /**
  * 通用工具历史 hook（哈希 / URL 等工具共用）。
  *
- * - 存储 key：`handy.tool.history.<toolId>.v1`；
+ * - 存储 key：`toolbox.tool.history.<toolId>.v1`；
  * - 超出 `limit` 自动裁剪最旧条目；
  * - localStorage 不可用时静默降级为纯内存（功能不受影响，仅不持久化）。
  *

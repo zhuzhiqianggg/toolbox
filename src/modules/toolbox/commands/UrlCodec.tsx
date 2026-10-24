@@ -284,7 +284,7 @@ export function UrlCodec({ initialInput = '' }: CommandProps): React.JSX.Element
           apply: () => {
             setMode('decode');
             setMethod('component');
-            setInput('%E9%A1%BA%E6%89%8B%20Handy');
+            setInput('%E9%A1%BA%E6%89%8B%20Toolbox');
           },
         },
       ]}

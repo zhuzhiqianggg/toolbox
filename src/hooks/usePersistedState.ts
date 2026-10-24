@@ -22,7 +22,7 @@ import * as React from 'react';
  *
  * # 存储布局
  *
- * 与 `useToolState` 共用一套键：`handy.tool.<commandId>` 下存**一个对象**，
+ * 与 `useToolState` 共用一套键：`toolbox.tool.<commandId>` 下存**一个对象**，
  * 每个字段对应一个持久化状态。于是两类 hook 在同一个工具里也读写同一份数据。
  * （唯一约束：同一 `commandId` 不要既用 `useToolState` 又用 `usePersistedState`
  * —— `useToolState` 会把整份对象重写，覆盖掉另一边的字段。现状没有这样的工具。）
@@ -40,7 +40,7 @@ import * as React from 'react';
  */
 
 /** 存储键前缀（与 `useToolState` 一致） */
-const PREFIX = 'handy.tool.';
+const PREFIX = 'toolbox.tool.';
 
 /** 单工具单次写入上限（约 256KB 字符），与 `useToolState` 对齐 */
 const MAX_BYTES = 256 * 1024;

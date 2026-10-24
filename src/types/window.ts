@@ -1,11 +1,5 @@
 /** 窗口类型（与 Rust `WindowKind` / `?window=` 参数对应） */
-export type WindowKind =
-  | 'main'
-  | 'settings'
-  | 'note'
-  | 'clip-quick'
-  | 'organizer'
-  | 'grid-overlay';
+export type WindowKind = 'main' | 'settings' | 'note';
 
 /** 主面板可承载的界面形态 */
 export type ModuleSurface = 'panel' | 'window' | 'overlay' | 'tray';

@@ -7,7 +7,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 
 const PORT = 9321;
-const OUT = 'D:/_Projects/ops/handy/diag_beacon.log';
+const OUT = 'D:/Personal/Projects/toolbox/.build-logs/diag_beacon.log';
 
 const server = http.createServer((req, res) => {
   let body = '';

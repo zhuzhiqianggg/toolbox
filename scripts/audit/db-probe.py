@@ -8,7 +8,7 @@ import os
 import sqlite3
 import sys
 
-DB_PATH = os.path.join(os.environ['APPDATA'], 'com.handy.desktop', 'handy.db')
+DB_PATH = os.path.join(os.environ['APPDATA'], 'com.zhuzhiqiang.toolbox', 'toolbox.db')
 
 
 def main() -> int:

@@ -37,7 +37,7 @@ async function notifyOnce(title: string): Promise<boolean> {
   if (!granted) {
     return false;
   }
-  plugin.sendNotification({ title: '待办提醒 · Handy', body: title });
+  plugin.sendNotification({ title: '待办提醒 · Toolbox', body: title });
   return true;
 }
 
@@ -77,7 +77,7 @@ export async function runReminderSweep(
         notified += 1;
       }
     } catch (error: unknown) {
-      console.error(`[Handy] 待办提醒处理失败（已跳过该条，id=${todo.id}）：`, error);
+      console.error(`[Toolbox] 待办提醒处理失败（已跳过该条，id=${todo.id}）：`, error);
       continue;
     }
   }
@@ -94,7 +94,7 @@ export function ReminderScheduler(): null {
     }
     const sweep = (): void => {
       void runReminderSweep().catch((error: unknown) => {
-        console.error('[Handy] 待办提醒调度失败：', error);
+        console.error('[Toolbox] 待办提醒调度失败：', error);
       });
     };
     sweep();

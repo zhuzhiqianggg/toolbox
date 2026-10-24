@@ -4,12 +4,9 @@
 
 pub mod app;
 pub mod backup;
-pub mod bar;
-pub mod grid;
 pub mod http;
 pub mod misc;
 pub mod notes;
-pub mod organizer;
 pub mod sys;
 pub mod todos;
 pub mod vault;

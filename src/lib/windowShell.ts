@@ -11,7 +11,7 @@ import type { Window as TauriWindow } from '@tauri-apps/api/window';
  * - **按视图类型套用预设尺寸**（命令面板 / 工具页 / 模块内页 / 设置中心）；
  * - **贴合屏幕**：预设尺寸先 clamp 到当前显示器工作区的 92%，小屏笔记本不溢出；
  * - **用户覆盖优先**：用户手动拖拽缩放过之后，切换视图不再强行套用预设；
- * - **持久化**：`{ w, h, userResized }` 写 localStorage（`handy.window.v1`），下次启动恢复。
+ * - **持久化**：`{ w, h, userResized }` 写 localStorage（`toolbox.window.v1`），下次启动恢复。
  *
  * **非 Tauri 环境（浏览器冒烟）**：所有导出函数静默 no-op，不抛错、不写存储。
  */
@@ -34,7 +34,7 @@ export interface WindowShellStatus {
   maximized: boolean;
 }
 
-const STORAGE_KEY = 'handy.window.v1';
+const STORAGE_KEY = 'toolbox.window.v1';
 /** 预设尺寸最多占屏幕工作区的比例（留边，避免贴边 / 溢出） */
 const SCREEN_RATIO = 0.92;
 /** 尺寸变化持久化防抖（毫秒） */

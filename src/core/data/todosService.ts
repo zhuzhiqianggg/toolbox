@@ -107,7 +107,7 @@ function rowToTodo(row: Record<string, unknown>): Todo {
 /** 待办需要 SQLite（仅 Tauri 宿主内可用）；否则抛出可读错误。 */
 function assertDesktop(): void {
   if (!isTauri()) {
-    throw new Error('待办功能需要 Handy 桌面环境（SQLite 不可用）');
+    throw new Error('待办功能需要 Toolbox 桌面环境（SQLite 不可用）');
   }
 }
 

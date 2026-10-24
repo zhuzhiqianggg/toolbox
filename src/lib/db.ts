@@ -12,7 +12,7 @@ import { isTauri } from '@/platform/detect';
  */
 
 /** 数据库 URL（须与 `tauri.conf.json` → `plugins.sql.preload` 一致）。 */
-export const DB_URL = 'sqlite:handy.db';
+export const DB_URL = 'sqlite:toolbox.db';
 
 /** 插件返回的行类型（宽松，由调用方以泛型收窄）。 */
 export type DbRow = Record<string, unknown>;
@@ -37,7 +37,7 @@ function loadDatabase(): Promise<SqlDatabase> {
         try {
           await db.execute('PRAGMA foreign_keys = ON;');
         } catch (pragmaError: unknown) {
-          console.warn('[Handy] PRAGMA foreign_keys 设置失败（外键行为回退数据库默认）：', pragmaError);
+          console.warn('[Toolbox] PRAGMA foreign_keys 设置失败（外键行为回退数据库默认）：', pragmaError);
         }
         return db;
       })

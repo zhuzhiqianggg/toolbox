@@ -145,7 +145,7 @@ export function NoteWindow({ noteId }: NoteWindowProps): React.JSX.Element {
         }
         unlisteners = [onMoved, onResized];
       } catch (error: unknown) {
-        console.error('[Handy] 便签几何监听失败（不影响编辑）：', error);
+        console.error('[Toolbox] 便签几何监听失败（不影响编辑）：', error);
       }
     })();
 
@@ -173,7 +173,7 @@ export function NoteWindow({ noteId }: NoteWindowProps): React.JSX.Element {
       .getState()
       .togglePin(note.id)
       .then(() => setAlwaysOnTop(next))
-      .catch((error: unknown) => console.error('[Handy] 切换置顶失败：', error));
+      .catch((error: unknown) => console.error('[Toolbox] 切换置顶失败：', error));
   }, [note]);
 
   const handlePickColor = useCallback((color: string): void => {

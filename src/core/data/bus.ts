@@ -48,7 +48,7 @@ function dispatch(event: string, payload: unknown): void {
     try {
       handler(payload);
     } catch (error: unknown) {
-      console.error(`[Handy] 事件处理器异常（${event}）：`, error);
+      console.error(`[Toolbox] 事件处理器异常（${event}）：`, error);
     }
   }
 }
@@ -75,7 +75,7 @@ async function ensureTauriListener(event: string): Promise<void> {
     tauriReady = true;
   } catch (error: unknown) {
     listenedEvents.delete(event);
-    console.error(`[Handy] 注册事件监听失败（${event}）：`, error);
+    console.error(`[Toolbox] 注册事件监听失败（${event}）：`, error);
   }
 }
 
@@ -122,6 +122,6 @@ export async function busEmit<T extends object>(event: string, payload: T): Prom
       // 首次广播时事件插件可能未就绪，静默降级（本地派发已生效）
       return;
     }
-    console.error(`[Handy] 广播事件失败（${event}）：`, error);
+    console.error(`[Toolbox] 广播事件失败（${event}）：`, error);
   }
 }

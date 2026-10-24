@@ -24,12 +24,12 @@ async function pickDirectory(title: string): Promise<string | null> {
 }
 
 /**
- * 导出备份：弹目录选择 → Rust 生成 `handy-backup-YYYYMMDD-HHmmss/` 产物。
+ * 导出备份：弹目录选择 → Rust 生成 `toolbox-backup-YYYYMMDD-HHmmss/` 产物。
  * @returns 产物目录；用户取消选择返回 null
  */
 export async function exportBackup(): Promise<BackupReport | null> {
   if (!isTauri()) {
-    throw new Error('备份功能需要 Handy 桌面环境');
+    throw new Error('备份功能需要 Toolbox 桌面环境');
   }
   const dir = await pickDirectory('选择备份保存位置');
   if (dir === null) {
@@ -45,7 +45,7 @@ export async function exportBackup(): Promise<BackupReport | null> {
  */
 export async function importBackup(): Promise<ImportOutcome | null> {
   if (!isTauri()) {
-    throw new Error('备份功能需要 Handy 桌面环境');
+    throw new Error('备份功能需要 Toolbox 桌面环境');
   }
   const dir = await pickDirectory('选择备份目录');
   if (dir === null) {

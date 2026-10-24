@@ -1,11 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Info, Pin, PinOff } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { CalendarDays, Info } from 'lucide-react';
 import { isTauri } from '@/platform/detect';
-import { toast } from '@/components/ui/toast';
 import { useTodosStore } from '@/stores/useTodosStore';
 import { useNotesStore } from '@/stores/useNotesStore';
-import { useAppStore } from '@/stores/useAppStore';
 import { dayInfo, ganZhi, type DayInfo } from '@/lib/lunar';
 import { holidayOf } from '@/lib/holidays';
 import { CalendarPanel } from './CalendarPanel';
@@ -151,10 +148,6 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
   /** 递增信号：点日历后聚焦「新增事件」输入框 */
   const [focusToken, setFocusToken] = useState<number>(0);
 
-  // —— 顶部贴条常驻开关（settings.barPinned 为唯一事实源，窗口显隐由 main.tsx 订阅驱动）——
-  const barPinned = useAppStore((state) => state.settings.barPinned);
-  const updateSettings = useAppStore((state) => state.updateSettings);
-
   const pendingByDay = useMemo(() => pendingCountByDay(todos), [todos]);
 
   /** 头部概览：今日 / 本周 / 本月 未完成数 */
@@ -192,25 +185,6 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
     setAnchorMs(startOfDay(dayMs));
     setScope('day');
     setFocusToken((token) => token + 1);
-  };
-
-  /**
-   * 切换「今日概览」贴条常驻：写 `settings.barPinned` 即可 ——
-   * 窗口显隐由 `main.tsx` 订阅该字段驱动（`bar_show` / `bar_hide`）。
-   */
-  const handlePinBar = (): void => {
-    const next = !barPinned;
-    void updateSettings({ barPinned: next }).catch((error: unknown) => {
-      toast.error('贴条设置失败', {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    });
-    if (!next) {
-      return;
-    }
-    toast.success('已贴到桌面顶部', {
-      description: '贴条上可直接勾掉完成项、下拉展开全部今日待办；点图钉可切换它是否始终置顶',
-    });
   };
 
   const statChip = (label: string, value: number, tone: 'normal' | 'warn' = 'normal'): React.JSX.Element => (
@@ -255,16 +229,6 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
           <p className="text-[11px] text-muted-foreground">
             当前查看：{relativeDayLabel(anchorMs)}
           </p>
-          <Button
-            variant={barPinned ? 'default' : 'outline'}
-            size="sm"
-            className="h-7 px-2.5 text-xs"
-            onClick={handlePinBar}
-            title={barPinned ? '取消常驻：贴条将从桌面顶部收起' : '把今日概览贴到桌面顶部并常驻'}
-          >
-            {barPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-            {barPinned ? '已常驻桌面顶部' : '贴到桌面顶部'}
-          </Button>
         </div>
       </header>
 
@@ -277,7 +241,7 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
         ) : (
           <div className="mx-6 mb-3 flex shrink-0 items-center gap-2 rounded-md border border-brand/15 bg-brand-muted/50 px-3 py-2 text-xs text-muted-foreground">
             <Info className="h-3.5 w-3.5 shrink-0 text-brand" />
-            浏览器预览模式：待办与便签数据存储在本机 SQLite 中，请在 Handy 桌面版中使用完整功能。
+            浏览器预览模式：待办与便签数据存储在本机 SQLite 中，请在 Toolbox 桌面版中使用完整功能。
           </div>
         )
       ) : null}

@@ -235,7 +235,7 @@ export function Base64Codec({ initialInput = '' }: CommandProps): React.JSX.Elem
       return;
     }
     const name = mode === 'encode' ? 'base64' : 'decoded';
-    const ok = downloadTextFile(`handy-${name}-${timestampSuffix()}.txt`, result.text);
+    const ok = downloadTextFile(`toolbox-${name}-${timestampSuffix()}.txt`, result.text);
     if (ok) {
       toast.success('已导出为 .txt');
     } else {
@@ -290,7 +290,7 @@ export function Base64Codec({ initialInput = '' }: CommandProps): React.JSX.Elem
             setEncoding('utf-8');
             setUrlSafe(false);
             setWrap(false);
-            setInput('Handy 顺手 · 效率工具');
+            setInput('Toolbox 顺手 · 效率工具');
           },
         },
         {
@@ -318,7 +318,7 @@ export function Base64Codec({ initialInput = '' }: CommandProps): React.JSX.Elem
             setMode('encode');
             setUrlSafe(false);
             setWrap(true);
-            setInput('Handy 顺手 · 效率工具 '.repeat(6));
+            setInput('Toolbox 顺手 · 效率工具 '.repeat(6));
           },
         },
         {

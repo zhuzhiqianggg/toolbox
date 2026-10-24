@@ -29,7 +29,7 @@ export function ModuleView({ moduleId }: { moduleId: string }): React.JSX.Elemen
     }
     mod
       .loadView()
-      // guardLoad：START/OK/FAIL 写 Handy.log + 10s 超时兜底（避免视图静默挂起）
+      // guardLoad：START/OK/FAIL 写 Toolbox.log + 10s 超时兜底（避免视图静默挂起）
       .then(() => import('@/lib/diag'))
       .then(({ guardLoad }) => guardLoad(`module:${moduleId}`, () => mod.loadView!()))
       .then((loaded) => {

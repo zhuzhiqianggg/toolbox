@@ -22,7 +22,7 @@ pub async fn platform_info() -> Result<PlatformInfo, String> {
     Ok(platform::current().info())
 }
 
-/// 前端诊断日志直写通道（绕过插件 ACL；走 log 门面 → Handy.log）。
+/// 前端诊断日志直写通道（绕过插件 ACL；走 log 门面 → Toolbox.log）。
 #[tauri::command]
 pub async fn debug_log(message: String) {
     log::info!("[diag-rust] {message}");
@@ -31,9 +31,6 @@ pub async fn debug_log(message: String) {
 /// 退出应用。
 #[tauri::command]
 pub async fn app_quit(app: AppHandle) {
-    // 退出前先把系统桌面图标还给系统（V44.2）：托盘「退出」是用户最常用的离场路径，
-    // 这里显式恢复一次，确保即便 `RunEvent` 的退出分支因故没跑到，桌面也不会被留下空白。
-    crate::commands::grid::restore_desktop_icons(&app);
     app.exit(0);
 }
 
@@ -55,41 +52,9 @@ pub async fn app_toggle_main(app: AppHandle) -> Result<(), String> {
     window::toggle_main_palette(&app)
 }
 
-/// 桌面右键菜单入口：是否已装好（V45）。
-///
-/// 用户 09-19 发来腾讯桌面整理的截图问能不能借鉴 —— 借的就是它在「桌面空白处右键」
-/// 里加的那一项「开启桌面整理」。装在 HKCU，不需要管理员权限。
-#[tauri::command]
-pub async fn desktop_menu_status() -> Result<bool, String> {
-    platform::desktop_menu::status()
-}
-
-/// 装好桌面右键菜单入口（幂等）。
-///
-/// V47：同时清掉 `desktop_menu_optout` —— 用户重新打开，就是明确表达「我要它」，
-/// 启动自愈从此不再跳过。
-#[tauri::command]
-pub async fn desktop_menu_install(app: AppHandle) -> Result<(), String> {
-    platform::desktop_menu::install()?;
-    let _ = crate::commands::grid::set_desktop_menu_optout(&app, false);
-    Ok(())
-}
-
-/// 移除桌面右键菜单入口（不存在时也返回成功）。
-///
-/// V47：同时记 `desktop_menu_optout` —— 用户主动关掉的入口，启动自愈**不得**偷偷加回来
-/// （否则「桌面整理」页里那个开关形同虚设）。
-#[tauri::command]
-pub async fn desktop_menu_remove(app: AppHandle) -> Result<(), String> {
-    platform::desktop_menu::remove()?;
-    let _ = crate::commands::grid::set_desktop_menu_optout(&app, true);
-    Ok(())
-}
-
 /// 设置主窗口置顶（设置项「窗口置顶」的唯一执行点）。
 ///
 /// 默认**不置顶**：置顶窗口会盖住系统弹框与其它程序（用户反馈的痛点）。
-/// 贴条（`workstation-bar`）的置顶由其形态本身决定，**不经本命令**、不受本开关影响。
 #[tauri::command]
 pub async fn app_set_pinned(app: AppHandle, pinned: bool) -> Result<(), String> {
     window::set_main_pinned(&app, pinned)
@@ -155,7 +120,7 @@ pub async fn module_set_enabled(app: AppHandle, module_id: String, enabled: bool
 
     // 2) settings.json 镜像（跨版本兼容 / 备份可读；失败不阻断——表为准）
     if let Err(err) = write_store_mirror(&app, &module_id, enabled) {
-        eprintln!("[Handy] 模块状态镜像写入失败（表已生效）：{err}");
+        eprintln!("[Toolbox] 模块状态镜像写入失败（表已生效）：{err}");
     }
     Ok(())
 }

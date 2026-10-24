@@ -35,14 +35,14 @@ export const SYSTEM_COMMANDS: readonly CommandMeta[] = [
   {
     id: 'open-about',
     moduleId: 'system',
-    name: '关于 Handy',
+    name: '关于 Toolbox',
     description: '查看版本与项目信息',
     icon: 'Info',
     aliases: ['about', 'version', 'guanyu'],
     keywords: ['关于', '版本', '信息', 'gy'],
     tier: 'free',
     run: () => {
-      toast.message('Handy · 顺手', { description: '跨平台桌面效率套件 · v0.1.0' });
+      toast.message('Toolbox', { description: '跨平台桌面效率套件 · v0.1.0' });
     },
   },
   {

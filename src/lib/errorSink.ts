@@ -3,7 +3,7 @@
  *
  * 用户要求：「客户端操作报错要方便排查 —— 我这边测试出错后你能看日志解决」。
  * 以前的窘境是：界面里点了没反应、弹了个看不懂的错，**只有按 F12 开控制台才看得到**，
- * 而用户不会去开控制台。现在三个来源全部落到 `%LOCALAPPDATA%\Handy\handy.log`：
+ * 而用户不会去开控制台。现在三个来源全部落到 `%LOCALAPPDATA%\Toolbox\toolbox.log`：
  *
  *   ① `window.onerror` —— 同步运行时错误与资源加载失败；
  *   ② `unhandledrejection` —— 没人 catch 的 Promise；

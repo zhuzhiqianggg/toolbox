@@ -125,7 +125,7 @@ export function renderMarkdown(src: string): string {
       ALLOW_DATA_ATTR: false,
     });
   } catch (error: unknown) {
-    console.error('[Handy] Markdown 渲染失败，降级为纯文本：', error);
+    console.error('[Toolbox] Markdown 渲染失败，降级为纯文本：', error);
     return `<p>${escapeHtml(src)}</p>`;
   }
 }
@@ -188,7 +188,7 @@ export function stripMarkdown(src: string): string {
         .trim() || ''
     );
   } catch (error: unknown) {
-    console.error('[Handy] Markdown 去标记失败，返回原文：', error);
+    console.error('[Toolbox] Markdown 去标记失败，返回原文：', error);
     return src;
   }
 }

@@ -259,12 +259,12 @@ const IPV4_LIST = `10.20.30.204
 01.2.3.4`;
 
 /** 密码候选（含位数不足、缺大小写、带空格） */
-const PASSWORD_LIST = `Handy@2026
+const PASSWORD_LIST = `Toolbox@2026
 Abcdef123!
 aB3!kQ9
 ABCDEFG123!
 abcdefg123!
-Handy 2026`;
+Toolbox 2026`;
 
 /** 日期候选（含非闰年 2-29、13 月、4 月 31 日、缺前导零） */
 const DATE_LIST = `2026-09-15
@@ -418,7 +418,7 @@ export const REGEX_LIBRARY: readonly RegexExample[] = [
     sampleKind: 'list',
     text: PASSWORD_LIST,
     description:
-      '三个前瞻（lookahead）分别断言「至少一个小写 / 一个大写 / 一个数字」，最后才是整体长度与字符集。前瞻只判断不消耗，所以能叠加多个条件。示例里 ABCDEFG123! 缺小写、aB3!kQ9 位数不够、Handy 2026 含空格，都会被拒。',
+      '三个前瞻（lookahead）分别断言「至少一个小写 / 一个大写 / 一个数字」，最后才是整体长度与字符集。前瞻只判断不消耗，所以能叠加多个条件。示例里 ABCDEFG123! 缺小写、aB3!kQ9 位数不够、Toolbox 2026 含空格，都会被拒。',
   },
   {
     group: '常见校验',

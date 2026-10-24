@@ -4,7 +4,7 @@
  * React 的渲染期错误会让**整棵子树卸载**，用户看到的是白屏 —— 而白屏是最难排查的
  * 一种表现：没有提示、没有弹窗、不看控制台什么都不知道。这里做两件事：
  *   ① 给出一个能看懂、能重试的兜底界面；
- *   ② 把错误连组件栈一起写进统一日志（`handy.log`），用户可以直接回传。
+ *   ② 把错误连组件栈一起写进统一日志（`toolbox.log`），用户可以直接回传。
  */
 import React from 'react';
 import { reportReactError } from '@/lib/errorSink';

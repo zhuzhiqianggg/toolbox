@@ -53,7 +53,7 @@ const PATH_RESULT_LIMIT = 200;
 
 const SAMPLE_JSON = `{
   "store": {
-    "name": "Handy 商店",
+    "name": "Toolbox 商店",
     "book": [
       { "title": "顺风而行", "price": 39.9, "tags": ["new", "hot"], "stock": true },
       { "title": "桌面效率手册", "price": 58, "tags": ["classic"], "stock": false }
@@ -546,7 +546,7 @@ export function JsonFormatter({ initialInput = '' }: CommandProps): React.JSX.El
             autoFocus
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder='{"name":"Handy","tags":["desktop","efficiency"]}'
+            placeholder='{"name":"Toolbox","tags":["desktop","efficiency"]}'
             spellCheck={false}
             className={
               'min-h-[200px] w-full flex-1 resize-none rounded-lg border border-input bg-background p-3 font-mono text-xs ' +

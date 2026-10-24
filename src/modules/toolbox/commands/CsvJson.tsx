@@ -182,7 +182,7 @@ export function CsvJson({ initialInput = '' }: CommandProps): React.JSX.Element 
     }
     const ext = tab === 'csv2json' ? 'json' : 'csv';
     const mime = ext === 'json' ? 'application/json;charset=utf-8' : 'text/csv;charset=utf-8';
-    const ok = downloadTextFile(`handy-csvjson-${timestampSuffix()}.${ext}`, output, mime);
+    const ok = downloadTextFile(`toolbox-csvjson-${timestampSuffix()}.${ext}`, output, mime);
     if (ok) {
       toast.success(`已导出 .${ext} 文件`);
     } else {
@@ -212,7 +212,7 @@ export function CsvJson({ initialInput = '' }: CommandProps): React.JSX.Element 
               {
                 label: '最小示例',
                 description: '两行 CSV，看数字如何被自动识别为 number',
-                apply: () => setInput('name,age,score\nHandy,3,99.5\n顺手,1,88'),
+                apply: () => setInput('name,age,score\nToolbox,3,99.5\n顺手,1,88'),
               },
               {
                 label: '带空行与空单元格',
@@ -229,7 +229,7 @@ export function CsvJson({ initialInput = '' }: CommandProps): React.JSX.Element 
               {
                 label: '最小示例',
                 description: '两个同构对象，最标准的 JSON → CSV',
-                apply: () => setInput('[{"name":"Handy","age":3},{"name":"顺手","age":1}]'),
+                apply: () => setInput('[{"name":"Toolbox","age":3},{"name":"顺手","age":1}]'),
               },
               {
                 label: '含特殊字符',
@@ -253,7 +253,7 @@ export function CsvJson({ initialInput = '' }: CommandProps): React.JSX.Element 
               rows={12}
               className="w-full min-h-0 flex-1 rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               value={input}
-              placeholder={tab === 'csv2json' ? 'name,age\nHandy,3' : '[{"name":"Handy","age":3}]'}
+              placeholder={tab === 'csv2json' ? 'name,age\nToolbox,3' : '[{"name":"Toolbox","age":3}]'}
               onChange={(event) => setInput(event.target.value)}
             />
             {error ? <p className="text-xs text-destructive">{error}</p> : null}

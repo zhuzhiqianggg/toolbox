@@ -178,7 +178,7 @@ export function JsonToTs({ initialInput = '' }: CommandProps): React.JSX.Element
         {
           label: '非法标识符键',
           description: '键里带连字符/中文，会被自动加上引号，避免生成出不合法 TS',
-          apply: () => setInput('{"user-name":"handy","最后登录":"2026-09-15","a b":1}'),
+          apply: () => setInput('{"user-name":"toolbox","最后登录":"2026-09-15","a b":1}'),
         },
         {
           label: '顶层数组',
@@ -203,7 +203,7 @@ export function JsonToTs({ initialInput = '' }: CommandProps): React.JSX.Element
             rows={14}
             className="w-full min-h-0 flex-1 rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={input}
-            placeholder={'{\n  "id": 1,\n  "name": "Handy",\n  "tags": ["a", "b"]\n}'}
+            placeholder={'{\n  "id": 1,\n  "name": "Toolbox",\n  "tags": ["a", "b"]\n}'}
             onChange={(event) => setInput(event.target.value)}
           />
           {input.trim() && !result.ok ? (

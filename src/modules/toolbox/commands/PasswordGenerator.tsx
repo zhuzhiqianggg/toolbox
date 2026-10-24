@@ -354,7 +354,7 @@ export function PasswordGenerator(_props: CommandProps): React.JSX.Element {
       toast.error('暂无可导出的密码');
       return;
     }
-    const ok = downloadTextFile(`handy-passwords-${timestampSuffix()}.txt`, passwords.join('\n'));
+    const ok = downloadTextFile(`toolbox-passwords-${timestampSuffix()}.txt`, passwords.join('\n'));
     if (ok) {
       toast.success(`已导出 ${passwords.length} 条密码为 .txt`);
     } else {

@@ -7,7 +7,7 @@
 
 /** 导出结果摘要 */
 export interface BackupReport {
-  /** 产物目录绝对路径（`<用户选定目录>/handy-backup-YYYYMMDD-HHmmss`） */
+  /** 产物目录绝对路径（`<用户选定目录>/toolbox-backup-YYYYMMDD-HHmmss`） */
   backupDir: string;
   /** 产物文件名列表 */
   files: string[];

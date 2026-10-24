@@ -44,7 +44,7 @@ function slugify(
  */
 export function SlugGenerator({ initialInput = '' }: CommandProps): React.JSX.Element {
   const shell = useCommandShell(COMMAND_ID);
-  const [input, setInput] = usePersistedState<string>(COMMAND_ID, 'input', initialInput || 'Handy 顺手 · 效率工具');
+  const [input, setInput] = usePersistedState<string>(COMMAND_ID, 'input', initialInput || 'Toolbox 顺手 · 效率工具');
   const [separator, setSeparator] = usePersistedState<Separator>(COMMAND_ID, 'separator', '-');
   const [lowercase, setLowercase] = usePersistedState<boolean>(COMMAND_ID, 'lowercase', true);
   const [romanize, setRomanize] = usePersistedState<boolean>(COMMAND_ID, 'romanize', true);
@@ -71,7 +71,7 @@ export function SlugGenerator({ initialInput = '' }: CommandProps): React.JSX.El
           label: '中文标题',
           description: '「顺手 · 效率工具」→ 开启拼音化后变成 shun-shou-xiao-lv-gong-ju 风格',
           apply: () => {
-            setInput('Handy 顺手 · 效率工具');
+            setInput('Toolbox 顺手 · 效率工具');
             setRomanize(true);
             setLowercase(true);
             setSeparator('-');

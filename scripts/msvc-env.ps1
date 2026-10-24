@@ -10,7 +10,7 @@
     - This script replicates what vcvars64.bat does, by locating the toolchain itself.
 
   Usage (must be DOT-SOURCED so the variables land in your session):
-      . D:\_Projects\ops\handy\scripts\msvc-env.ps1
+      . D:\Personal\Projects\toolbox\scripts\msvc-env.ps1
       cargo build
 
   Note: environment changes are process-scoped only. Nothing is written to the system.

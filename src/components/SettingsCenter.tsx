@@ -524,18 +524,8 @@ export function SettingsCenter({
           />
           <BooleanRow title="自动检查更新" description="有新版本时提示" field="autoUpdate" />
           <BooleanRow
-            title="桌面顶部常驻「今日概览」贴条"
-            description="在工作台/桌面顶部显示一条随时可见的待办速览，可直接勾掉完成项"
-            field="barPinned"
-          />
-          <BooleanRow
-            title="贴条始终置顶"
-            description="关闭后贴条退化成普通窗口：被其它窗口盖住，切回桌面又能看见（贴条上的图钉按钮同此开关）"
-            field="barOnTop"
-          />
-          <BooleanRow
             title="主窗口始终置顶"
-            description="开启后 Handy 会浮在所有窗口之上；默认关闭，避免挡住系统弹框与其它软件"
+            description="开启后 Toolbox 会浮在所有窗口之上；默认关闭，避免挡住系统弹框与其它软件"
             field="mainPinned"
           />
         </section>
@@ -599,7 +589,7 @@ export function SettingsCenter({
         {/* 关于 */}
         <section className="py-2">
           <h3 className="py-1 text-xs font-medium text-muted-foreground">关于</h3>
-          <Row title="Handy · 顺手" description="跨平台桌面效率套件">
+          <Row title="Toolbox" description="跨平台桌面效率套件">
             <span className="text-xs text-muted-foreground">v{APP_VERSION}</span>
           </Row>
         </section>

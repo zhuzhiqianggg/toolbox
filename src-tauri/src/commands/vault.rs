@@ -45,7 +45,7 @@ const SALT_LEN: usize = 16;
 /// AES-GCM nonce 长度（字节）。
 const NONCE_LEN: usize = 12;
 /// verifier 明文常量：解密结果与之常数时间比较即证明密钥正确。
-const VERIFIER_PLAINTEXT: &[u8] = b"handy-vault-ok";
+const VERIFIER_PLAINTEXT: &[u8] = b"toolbox-vault-ok";
 
 /// `vault_meta` 表中的盐条目键名。
 const META_SALT: &str = "salt";

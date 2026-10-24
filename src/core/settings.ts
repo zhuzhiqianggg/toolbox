@@ -132,16 +132,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   modules: {},
   tier: 'free',
   onboarded: false,
-  // 默认不常驻：贴条属于「需要了才贴」的可选增强，由工作台里的「贴到桌面顶部」开启
-  barPinned: false,
   // 默认不置顶：主窗口压在最上层会挡住系统弹框与其他软件，按需再开
   mainPinned: false,
   // 快捷入口默认只显示「Windows 上不好找」的那几项，不把 40+ 个系统面板一股脑铺满界面
   quickActionIds: [...DEFAULT_QUICK_ACTION_IDS],
   // 没被用户改过 → 跟随当前默认口径（V56 起因：默认口径变过，得让老用户跟着升级）
   quickActionsCustomized: false,
-  // 贴条默认始终置顶；不想被它一直压着时可从贴条上的图钉按钮关掉
-  barOnTop: true,
   // 纪念日默认空：属于用户私有数据，不预置任何条目
   anniversaries: [],
 };

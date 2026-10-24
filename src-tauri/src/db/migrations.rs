@@ -99,7 +99,7 @@ ALTER TABLE todos ADD COLUMN detail TEXT NOT NULL DEFAULT '';
 ///     问题是它和桌面原图标**完全重复**（同一批文件在桌面和格子里各显示一份），
 ///     用户的原话是「并不是整理收纳，而是复制了一份而已」；
 ///   - 新模型是**真实收纳型** —— 每个格子绑定一个真实目录
-///     （`桌面/Handy整理/<格子名>/`），拖进去 = 真把文件移进该目录。
+///     （`桌面/Toolbox整理/<格子名>/`），拖进去 = 真把文件移进该目录。
 ///     文件离开桌面根目录 → 桌面图标自然消失 → **不再重复**。
 ///
 /// 同时把格子扩成**挂件容器**：`kind` 区分收纳格 / 便签 / 日历，
@@ -150,7 +150,7 @@ ALTER TABLE grid_boxes ADD COLUMN accent TEXT NOT NULL DEFAULT '';
 /// v9：格子改「引用模型」—— 新增 `category`，并清掉历史登记（V37）。
 ///
 /// **为什么要清 `grid_items`**：V33–V36 的 `file_path` 全部指向
-/// `桌面/Handy整理/<格子名>/` 下的**真实文件**（因为那几版真的把文件搬进去了）。
+/// `桌面/Toolbox整理/<格子名>/` 下的**真实文件**（因为那几版真的把文件搬进去了）。
 /// 换成引用模型后这些路径已不该存在文件，留着只会变成一堆点不动的幽灵图标。
 /// 用户用「一键归类」重扫一遍即可 —— 桌面上的文件一个都没少，只是登记要重来一次。
 ///
@@ -279,7 +279,7 @@ mod tests {
     fn temp_conn(tag: &str) -> (PathBuf, Connection) {
         let mut path = std::env::temp_dir();
         path.push(format!(
-            "handy-migrate-test-{tag}-{}.db",
+            "toolbox-migrate-test-{tag}-{}.db",
             std::process::id()
         ));
         let _ = std::fs::remove_file(&path);
@@ -509,7 +509,7 @@ mod tests {
     /// v9：老库（停在 v8）里的「真搬运」登记必须被清干净，`category` 必须可读。
     ///
     /// 现场还原的是**真实的装机形态**：V33–V36 那几版把文件 `fs::rename` 进了
-    /// `桌面/Handy整理/<格子名>/`，所以 `grid_items.file_path` 存的是那个目录下的真实路径。
+    /// `桌面/Toolbox整理/<格子名>/`，所以 `grid_items.file_path` 存的是那个目录下的真实路径。
     /// 换成引用模型后这些路径指向的文件已经不在那儿了（用户要么撤回过、要么还在
     /// 那 704 层嵌套里），留着就是一堆点不动的幽灵图标 —— 这正是用户截图里看到的景象。
     ///
@@ -523,7 +523,7 @@ mod tests {
         apply_upto(&conn, 8);
         assert_eq!(versions(&conn), vec![1, 2, 3, 4, 5, 6, 7, 8], "预置应停在 v8");
 
-        // 一个「真搬运」时代的格子 + 它下面指向 Handy整理 目录的两条登记
+        // 一个「真搬运」时代的格子 + 它下面指向 Toolbox整理 目录的两条登记
         conn.execute(
             "INSERT INTO grid_boxes (name, pos_x, pos_y, width, height, sort, created_at, updated_at) \
              VALUES ('文档', 0, 0, 320, 220, 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')",
@@ -541,7 +541,7 @@ mod tests {
                  VALUES (?1, ?2, ?3, ?4, '2026-01-01T00:00:00Z')",
                 rusqlite::params![
                     box_id,
-                    format!("C:\\Users\\me\\Desktop\\Handy整理\\文档\\{name}"),
+                    format!("C:\\Users\\me\\Desktop\\Toolbox整理\\文档\\{name}"),
                     name,
                     idx as i64
                 ],

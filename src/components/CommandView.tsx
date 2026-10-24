@@ -46,7 +46,7 @@ export function CommandView({ commandId, input, source }: CommandViewProps): Rea
       };
     }
     import('@/lib/diag')
-      // guardLoad：START/OK/FAIL 写 Handy.log + 10s 超时兜底（避免永久「正在加载…」）
+      // guardLoad：START/OK/FAIL 写 Toolbox.log + 10s 超时兜底（避免永久「正在加载…」）
       .then(({ guardLoad }) => guardLoad(commandId, () => command.load!()))
       .then((loaded) => {
         if (alive) {

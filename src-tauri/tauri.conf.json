@@ -1,9 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Handy",
-  "mainBinaryName": "handy",
+  "productName": "Toolbox",
+  "mainBinaryName": "toolbox",
   "version": "0.1.0",
-  "identifier": "com.handy.desktop",
+  "identifier": "com.zhuzhiqiang.toolbox",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -14,7 +14,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Handy · 顺手",
+        "title": "Toolbox",
         "visible": false,
         "devtools": false,
         "width": 900,
@@ -39,11 +39,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "publisher": "Handy",
+    "publisher": "Toolbox",
     "category": "Productivity",
-    "shortDescription": "Handy · 顺手 — 一键呼出的桌面效率套件",
-    "longDescription": "Handy · 顺手：常驻托盘的跨平台桌面效率套件，提供统一命令面板、桌面整理、便签待办、剪贴板增强与效率工具箱。纯本地、默认不联网。",
-    "copyright": "Copyright © Handy. All rights reserved.",
+    "shortDescription": "Toolbox — 一键呼出的桌面效率套件",
+    "longDescription": "Toolbox：常驻托盘的跨平台桌面效率套件，提供统一命令面板、桌面整理、便签待办、剪贴板增强与效率工具箱。纯本地、默认不联网。",
+    "copyright": "Copyright © Toolbox. All rights reserved.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -66,12 +66,12 @@
   },
   "plugins": {
     "sql": {
-      "preload": ["sqlite:handy.db"]
+      "preload": ["sqlite:toolbox.db"]
     },
     "updater": {
       "pubkey": "dW5zaWduZWQtcGxhY2Vob2xkZXItcmVwbGFjZS1iZWZvcmUtcmVsZWFzZQ==",
       "endpoints": [
-        "https://releases.handy.example/{{target}}/{{arch}}/{{current_version}}"
+        "https://releases.toolbox.example/{{target}}/{{arch}}/{{current_version}}"
       ]
     }
   }

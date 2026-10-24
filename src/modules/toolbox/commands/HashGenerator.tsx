@@ -311,7 +311,7 @@ export function HashGenerator({ initialInput = '' }: CommandProps): React.JSX.El
       return;
     }
     const ok = downloadTextFile(
-      `handy-hash-${timestampSuffix()}.txt`,
+      `toolbox-hash-${timestampSuffix()}.txt`,
       digestsToText(digests, sourceLabel),
     );
     if (ok) {
@@ -377,7 +377,7 @@ export function HashGenerator({ initialInput = '' }: CommandProps): React.JSX.El
           description: '摘要算的是 UTF-8 字节，不是字符 —— 换编码值就变',
           apply: () => {
             setTab('text');
-            setText('Handy 顺手 · 效率工具');
+            setText('Toolbox 顺手 · 效率工具');
           },
         },
         {

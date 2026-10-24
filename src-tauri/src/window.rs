@@ -17,7 +17,7 @@ fn main_window(app: &AppHandle) -> Result<WebviewWindow, String> {
 /// 设置主窗口置顶状态。
 ///
 /// 主窗口**默认不置顶**（`tauri.conf.json` 里 `alwaysOnTop: false`）：置顶会盖住
-/// 系统弹框、浏览器、编辑器等窗口外的内容，只能先挪走 Handy 才能操作，很碍事。
+/// 系统弹框、浏览器、编辑器等窗口外的内容，只能先挪走 Toolbox 才能操作，很碍事。
 /// 因此把置顶收敛成一个**用户自选**的设置项（`settings.mainPinned`）。
 pub fn set_main_pinned(app: &AppHandle, pinned: bool) -> Result<(), String> {
     main_window(app)?
@@ -84,7 +84,7 @@ pub fn toggle_main_palette(app: &AppHandle) -> Result<(), String> {
 /// 说明：便签（`note-*`）等其他窗口在 V08/V12/V13 创建时应各自决定关闭语义，**不复用**本函数。
 pub fn attach_close_to_tray(app: &AppHandle) {
     let Some(win) = app.get_webview_window(MAIN_LABEL) else {
-        eprintln!("[Handy] 未找到主窗口（{MAIN_LABEL}），跳过 close-to-tray 挂载");
+        eprintln!("[Toolbox] 未找到主窗口（{MAIN_LABEL}），跳过 close-to-tray 挂载");
         return;
     };
     // 事件回调需 `'static`：克隆一份窗口句柄移入闭包，用于在回调内隐藏窗口。
@@ -95,7 +95,7 @@ pub fn attach_close_to_tray(app: &AppHandle) {
             api.prevent_close();
             // 隐藏到托盘，应用保持常驻（不退出）。
             if let Err(err) = handle.hide() {
-                eprintln!("[Handy] 隐藏主窗口失败：{err}");
+                eprintln!("[Toolbox] 隐藏主窗口失败：{err}");
             }
         }
     });
@@ -139,7 +139,7 @@ pub fn create_note_window(app: &AppHandle, note_id: &str) -> Result<WebviewWindo
             pinned = note.pinned;
         }
         Ok(None) => return Err(format!("便签不存在或已被删除（{note_id}）")),
-        Err(err) => eprintln!("[Handy] 读取便签几何失败，使用默认值：{err}"),
+        Err(err) => eprintln!("[Toolbox] 读取便签几何失败，使用默认值：{err}"),
     }
 
     let mut builder = WebviewWindowBuilder::new(
@@ -147,7 +147,7 @@ pub fn create_note_window(app: &AppHandle, note_id: &str) -> Result<WebviewWindo
         &label,
         WebviewUrl::App(format!("index.html?window=note-{note_id}").into()),
     )
-    .title("便签 · Handy")
+    .title("便签 · Toolbox")
     .decorations(false)
     .resizable(true)
     .minimizable(false)
