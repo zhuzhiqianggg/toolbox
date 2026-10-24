@@ -36,22 +36,22 @@ function ToolCard({ command, favorite, showFavoriteMark }: ToolCardProps): React
       onClick={() => openCommand(command.id)}
       title={command.description}
       className={cn(
-        'group relative flex flex-col gap-2 rounded-xl border border-border bg-card p-3.5 text-left',
+        'group relative flex flex-col gap-2.5 rounded-xl border border-border bg-card p-4 text-left',
         'shadow-card transition-all duration-200 ease-out',
         'hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-hover',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
         'active:translate-y-0',
       )}
     >
-      <span className="flex items-center gap-2.5">
+      <span className="flex items-center gap-3">
         <span
           className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 ease-out',
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 ease-out',
             'group-hover:scale-105',
             chip,
           )}
         >
-          <Icon className="h-4 w-4" />
+          <Icon className="h-5 w-5" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1">

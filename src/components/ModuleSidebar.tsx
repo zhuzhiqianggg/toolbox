@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Settings as SettingsIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Wrench } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { registry } from '@/core/moduleRegistry';
 import { openModule, openSettings } from '@/core/navigation';
@@ -47,6 +47,15 @@ export function ModuleSidebar({ className }: ModuleSidebarProps): React.JSX.Elem
         className,
       )}
     >
+      {/* 品牌徽标（纯展示，不做导航） */}
+      <div
+        className="brand-mark mb-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg shadow-card"
+        aria-hidden="true"
+      >
+        <Wrench className="h-5 w-5 text-white" />
+      </div>
+      <div className="mb-2 h-px w-6 shrink-0 bg-border" aria-hidden="true" />
+
       {modules.map((mod) => {
         const Icon = resolveIcon(mod.icon);
         const active = mod.id === activeId;

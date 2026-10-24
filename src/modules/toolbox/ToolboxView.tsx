@@ -41,10 +41,12 @@ function Section({ title, hint, count, commands, favoriteIds, children }: Sectio
     return null;
   }
   return (
-    <section className="space-y-2.5">
-      <div className="flex items-baseline gap-2">
-        <h3 className="text-[13px] font-medium text-foreground">{title}</h3>
-        <span className="text-[11px] tabular-nums text-muted-foreground">{count}</span>
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+          {count}
+        </span>
         {hint ? <span className="truncate text-[11px] text-muted-foreground">{hint}</span> : null}
       </div>
       <ToolGrid commands={commands} showFavoriteMark favoriteIds={favoriteIds} />
@@ -62,7 +64,7 @@ function Section({ title, hint, count, commands, favoriteIds, children }: Sectio
  *   - 否则进入浏览态：收藏 → 最近使用 → 按分类分组的完整清单。
  * 分组数据全部来自 `CommandMeta.category`，新增工具只要填了分类就会自动出现在对应组里。
  */
-export function ToolboxView({ windowKind }: ModuleProps): React.JSX.Element {
+export function ToolboxView(_props: ModuleProps): React.JSX.Element {
   const all = React.useMemo(() => registry.commandsOf('toolbox'), []);
   const [query, setQuery] = React.useState('');
   const [activeCat, setActiveCat] = React.useState<'all' | ToolCategory>('all');
@@ -133,10 +135,10 @@ export function ToolboxView({ windowKind }: ModuleProps): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col bg-canvas">
-      <header className="shrink-0 px-5 pt-5 pb-3">
+      <header className="brand-wash shrink-0 px-5 pb-4 pt-5">
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-foreground">工具箱</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">工具箱</h2>
             <p className="mt-1 text-[13px] text-muted-foreground">
               {all.length} 个工具 · 也可用快捷键呼出命令面板直接搜名称或拼音首字母
             </p>
@@ -153,9 +155,9 @@ export function ToolboxView({ windowKind }: ModuleProps): React.JSX.Element {
             placeholder="搜索工具…"
             aria-label="搜索工具"
             className={cn(
-              'h-9 w-full rounded-lg border border-border bg-card pl-9 pr-9 text-sm text-foreground',
+              'h-10 w-full rounded-lg border border-border bg-card pl-10 pr-9 text-sm text-foreground shadow-card',
               'placeholder:text-muted-foreground',
-              'transition-colors focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring/20',
+              'transition-colors focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring/15',
             )}
           />
           {query ? (
@@ -171,14 +173,14 @@ export function ToolboxView({ windowKind }: ModuleProps): React.JSX.Element {
         </div>
 
         {/* 分类页签 */}
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <div className="mt-3 flex flex-wrap gap-1.5">
           <button
             type="button"
             onClick={() => setActiveCat('all')}
             className={cn(
               'rounded-full border px-3 py-1 text-xs transition-colors',
               activeCat === 'all'
-                ? 'border-primary/30 bg-primary/10 text-primary'
+                ? 'border-primary/30 bg-primary/10 font-medium text-primary'
                 : 'border-border bg-card text-muted-foreground hover:border-border hover:bg-muted hover:text-foreground',
             )}
           >
@@ -195,7 +197,7 @@ export function ToolboxView({ windowKind }: ModuleProps): React.JSX.Element {
                 className={cn(
                   'rounded-full border px-3 py-1 text-xs transition-colors',
                   active
-                    ? 'border-primary/30 bg-primary/10 text-primary'
+                    ? 'border-primary/30 bg-primary/10 font-medium text-primary'
                     : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
@@ -248,10 +250,6 @@ export function ToolboxView({ windowKind }: ModuleProps): React.JSX.Element {
             </Button>
           </div>
         )}
-
-        {windowKind ? (
-          <p className="mt-6 text-[11px] text-muted-foreground">承载形态：{windowKind}</p>
-        ) : null}
       </div>
     </div>
   );

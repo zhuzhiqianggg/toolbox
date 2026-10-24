@@ -57,7 +57,7 @@ export function TitleBar(): React.JSX.Element | null {
     >
       <span
         data-tauri-drag-region
-        className="h-2 w-2 shrink-0 rounded-full bg-brand"
+        className="brand-mark h-2 w-2 shrink-0 rounded-full"
         aria-hidden="true"
       />
       <span

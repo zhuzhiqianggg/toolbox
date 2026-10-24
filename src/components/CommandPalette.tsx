@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Command } from 'cmdk';
-import { Search, Star } from 'lucide-react';
+import { Search, Star, Wrench } from 'lucide-react';
 import { SearchSuggest } from '@/components/SearchSuggest';
 import { registry } from '@/core/moduleRegistry';
 import { isListableCommand } from '@/core/sensitive';
@@ -92,6 +92,17 @@ function ActionRow({ command }: { command: CommandMeta }): React.JSX.Element {
   );
 }
 
+/** 按时间段问候（与工作台同一口径：5–12 早 / 12–18 下午 / 其余晚上） */
+function greetingOf(hour: number): string {
+  if (hour >= 5 && hour < 12) {
+    return '早上好';
+  }
+  if (hour >= 12 && hour < 18) {
+    return '下午好';
+  }
+  return '晚上好';
+}
+
 /**
  * 命令面板（V05 统一入口）。
  *
@@ -171,24 +182,51 @@ export function CommandPalette(): React.JSX.Element {
       onKeyDown={handleKeyDown}
       className="flex h-full flex-col"
     >
-      <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-        <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-        <Command.Input
-          autoFocus
-          value={query}
-          onValueChange={setQuery}
-          placeholder="搜索工具或模块，支持拼音首字母（如 sjc → 时间戳）"
-          className="h-6 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-        />
-        {query.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setQuery('')}
-            className="shrink-0 rounded px-1.5 text-xs text-muted-foreground hover:text-foreground"
+      <div className="brand-wash shrink-0 border-b border-border bg-background px-4 pb-3.5 pt-4">
+        <div className="flex items-center gap-2.5">
+          <span
+            className="brand-mark flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-card"
+            aria-hidden="true"
           >
-            清除
-          </button>
-        ) : null}
+            <Wrench className="h-4 w-4 text-white" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold leading-tight tracking-tight">
+              <span className="brand-gradient-text">Toolbox</span>
+            </p>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {greetingOf(new Date().getHours())}，需要什么工具直接搜
+            </p>
+          </div>
+          <kbd className="hidden shrink-0 items-center rounded-md border border-border bg-background/70 px-2 py-1 text-[10px] font-medium text-muted-foreground shadow-card sm:block">
+            Alt + Space
+          </kbd>
+        </div>
+
+        <div
+          className={cn(
+            'mt-3 flex items-center gap-2 rounded-lg border border-border bg-background px-3 shadow-card',
+            'transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-ring/15',
+          )}
+        >
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Command.Input
+            autoFocus
+            value={query}
+            onValueChange={setQuery}
+            placeholder="搜索工具或模块，支持拼音首字母（如 sjc → 时间戳）"
+            className="h-9 w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          {query.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="shrink-0 rounded px-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
+              清除
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <SearchSuggest />

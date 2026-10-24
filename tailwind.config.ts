@@ -1,9 +1,9 @@
 import type { Config } from 'tailwindcss';
 
 /**
- * Handy · 顺手 设计令牌
- * 风格：浅色、扁平、少层级、单一品牌强调色、低对比分割线、无重阴影。
- * 深浅色通过 CSS 变量 + `dark:` 前缀切换（MVP 保证浅色）。
+ * Toolbox 设计令牌
+ * 风格：浅色、扁平为骨、品牌渐变点缀、单一品牌强调色、低对比分割线、精致分层阴影。
+ * 深浅色通过 CSS 变量 + `dark:` 前缀切换。
  */
 const config: Config = {
   darkMode: 'class',
@@ -87,12 +87,12 @@ const config: Config = {
         xl: 'calc(var(--radius) + 4px)',
       },
       boxShadow: {
-        // V24 层次：card（静息）→ hover（悬停微抬）→ popover（浮层）。
-        // 一律走同一色相的低透明阴影，避免彩色投影那种廉价感。
-        card: '0 1px 2px 0 hsl(215 16% 47% / 0.06)',
-        panel: '0 1px 2px 0 hsl(215 16% 47% / 0.08)',
-        hover: '0 4px 12px -2px hsl(215 16% 47% / 0.12), 0 2px 4px -2px hsl(215 16% 47% / 0.06)',
-        popover: '0 8px 24px -4px hsl(215 16% 47% / 0.16), 0 2px 8px -2px hsl(215 16% 47% / 0.08)',
+        // 层次：card（静息）→ hover（悬停微抬）→ popover（浮层）。
+        // 一律走同一色相的低透明分层阴影，避免彩色投影那种廉价感。
+        card: '0 1px 2px 0 hsl(220 22% 45% / 0.05), 0 1px 3px 0 hsl(220 22% 45% / 0.04)',
+        panel: '0 1px 2px 0 hsl(220 22% 45% / 0.08), 0 2px 6px -2px hsl(220 22% 45% / 0.05)',
+        hover: '0 12px 32px -8px hsl(220 25% 45% / 0.14), 0 4px 10px -4px hsl(220 25% 45% / 0.08)',
+        popover: '0 16px 40px -12px hsl(220 25% 40% / 0.18), 0 4px 12px -4px hsl(220 25% 40% / 0.08)',
       },
       transitionTimingFunction: {
         // 统一的「现代感」缓动：出场快、收尾缓

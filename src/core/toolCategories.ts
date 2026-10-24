@@ -34,7 +34,7 @@ export const TOOL_CATEGORIES: readonly ToolCategoryMeta[] = [
     name: '文本处理',
     hint: '清洗、对比、去重、命名转换',
     icon: 'Type',
-    chip: 'bg-sky-50 text-sky-600',
+    chip: 'bg-gradient-to-br from-sky-500/15 to-sky-500/5 text-sky-600 ring-1 ring-inset ring-sky-500/20 dark:from-sky-400/20 dark:to-sky-400/5 dark:text-sky-300 dark:ring-sky-400/25',
     order: 10,
   },
   {
@@ -42,7 +42,7 @@ export const TOOL_CATEGORIES: readonly ToolCategoryMeta[] = [
     name: '数据格式',
     hint: 'JSON / SQL / CSV 的排版与互转',
     icon: 'Database',
-    chip: 'bg-violet-50 text-violet-600',
+    chip: 'bg-gradient-to-br from-violet-500/15 to-violet-500/5 text-violet-600 ring-1 ring-inset ring-violet-500/20 dark:from-violet-400/20 dark:to-violet-400/5 dark:text-violet-300 dark:ring-violet-400/25',
     order: 20,
   },
   {
@@ -50,7 +50,7 @@ export const TOOL_CATEGORIES: readonly ToolCategoryMeta[] = [
     name: '编码解码',
     hint: 'Base64 / URL / JWT / 摘要 / 图片',
     icon: 'Binary',
-    chip: 'bg-emerald-50 text-emerald-600',
+    chip: 'bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:from-emerald-400/20 dark:to-emerald-400/5 dark:text-emerald-300 dark:ring-emerald-400/25',
     order: 30,
   },
   {
@@ -58,7 +58,7 @@ export const TOOL_CATEGORIES: readonly ToolCategoryMeta[] = [
     name: '换算转换',
     hint: '时间戳、相对时间、单位与体积',
     icon: 'ArrowLeftRight',
-    chip: 'bg-amber-50 text-amber-600',
+    chip: 'bg-gradient-to-br from-amber-500/15 to-amber-500/5 text-amber-600 ring-1 ring-inset ring-amber-500/20 dark:from-amber-400/20 dark:to-amber-400/5 dark:text-amber-300 dark:ring-amber-400/25',
     order: 40,
   },
   {
@@ -66,7 +66,7 @@ export const TOOL_CATEGORIES: readonly ToolCategoryMeta[] = [
     name: '安全存储',
     hint: '密码生成、凭据与密钥保管',
     icon: 'ShieldCheck',
-    chip: 'bg-teal-50 text-teal-600',
+    chip: 'bg-gradient-to-br from-teal-500/15 to-teal-500/5 text-teal-600 ring-1 ring-inset ring-teal-500/20 dark:from-teal-400/20 dark:to-teal-400/5 dark:text-teal-300 dark:ring-teal-400/25',
     order: 45,
   },
   {
@@ -74,7 +74,7 @@ export const TOOL_CATEGORIES: readonly ToolCategoryMeta[] = [
     name: '生成器',
     hint: '密码、UUID、二维码',
     icon: 'Sparkles',
-    chip: 'bg-rose-50 text-rose-600',
+    chip: 'bg-gradient-to-br from-rose-500/15 to-rose-500/5 text-rose-600 ring-1 ring-inset ring-rose-500/20 dark:from-rose-400/20 dark:to-rose-400/5 dark:text-rose-300 dark:ring-rose-400/25',
     order: 50,
   },
   {
@@ -82,7 +82,7 @@ export const TOOL_CATEGORIES: readonly ToolCategoryMeta[] = [
     name: '开发辅助',
     hint: '正则、Cron、类型定义、码表',
     icon: 'Code2',
-    chip: 'bg-indigo-50 text-indigo-600',
+    chip: 'bg-gradient-to-br from-indigo-500/15 to-indigo-500/5 text-indigo-600 ring-1 ring-inset ring-indigo-500/20 dark:from-indigo-400/20 dark:to-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25',
     order: 60,
   },
   {
@@ -90,7 +90,7 @@ export const TOOL_CATEGORIES: readonly ToolCategoryMeta[] = [
     name: '日常工具',
     hint: '计算、取色、端口、剪贴板历史',
     icon: 'Calculator',
-    chip: 'bg-orange-50 text-orange-600',
+    chip: 'bg-gradient-to-br from-orange-500/15 to-orange-500/5 text-orange-600 ring-1 ring-inset ring-orange-500/20 dark:from-orange-400/20 dark:to-orange-400/5 dark:text-orange-300 dark:ring-orange-400/25',
     order: 12,
   },
 ];
