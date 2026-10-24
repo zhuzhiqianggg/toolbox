@@ -373,7 +373,12 @@ export function QrCodeGenerator({ initialInput = '' }: CommandProps): React.JSX.
   return (
     <CommandShell
       title="二维码工具"
-      onPaste={(t) => setText(t)}
+      onPaste={(t) => {
+        // 粘贴内容统一落到「文本」模板：否则当前停在 URL / WiFi 等模板时，
+        // 内容写进 text 字段但界面看不到，看起来像「粘贴没生效」
+        setTemplate('text');
+        setText(t);
+      }}
       description="文本 / URL / WiFi / 邮箱 / 电话生成二维码，支持图片解析"
       icon={<QrCode className="h-4 w-4" />}
       onBack={shell.onBack}

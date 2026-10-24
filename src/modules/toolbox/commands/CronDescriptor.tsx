@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { useCommandShell } from '@/hooks/useCommandShell';
 import { useToolState } from '@/hooks/useToolState';
+import { copyText as writeClipboard } from '@/lib/clipboard';
 import {
   CRON_PRESETS,
   analyzeCron,
@@ -191,7 +192,8 @@ function InlineText({ text }: { text: string }): React.JSX.Element {
   );
 }
 
-/** 字段取值展开文案（格子下方那行小字） */function valuesLine(field: CronFieldResult | undefined): { text: string; full: string } | null {
+/** 字段取值展开文案（格子下方那行小字） */
+function valuesLine(field: CronFieldResult | undefined): { text: string; full: string } | null {
   if (field === undefined || !field.ok || field.values === null || field.values.length === 0) {
     return null;
   }
@@ -250,14 +252,16 @@ export function CronDescriptor({ initialInput = '' }: CommandProps): React.JSX.E
   };
 
   const [copied, setCopied] = React.useState(false);
+  // 走 lib/clipboard（Tauri 优先，浏览器降级），不用裸 navigator.clipboard
   const copyExpression = (): void => {
-    void navigator.clipboard
-      .writeText(state.input.trim())
-      .then(() => {
+    void writeClipboard(state.input.trim()).then((ok) => {
+      if (ok) {
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);
-      })
-      .catch(() => toast.error('复制失败'));
+      } else {
+        toast.error('复制失败，请手动选择文本复制');
+      }
+    });
   };
 
   const apply = (expr: string): void => {
@@ -449,7 +453,7 @@ export function CronDescriptor({ initialInput = '' }: CommandProps): React.JSX.E
                           ? '—'
                           : field.ok
                             ? field.text
-                            : `⚠ ${field.error ?? '格式错误'}`}
+                            : `错误：${field.error ?? '格式错误'}`}
                       </span>
                       {values !== null ? (
                         <span
@@ -512,7 +516,7 @@ export function CronDescriptor({ initialInput = '' }: CommandProps): React.JSX.E
                       {field.raw}
                     </code>
                     <span className="min-w-0 flex-1 text-foreground">
-                      {field.ok ? field.text : `⚠ ${field.error ?? '格式错误'}`}
+                      {field.ok ? field.text : `错误：${field.error ?? '格式错误'}`}
                     </span>
                     {values !== null ? (
                       <span
@@ -581,8 +585,8 @@ export function CronDescriptor({ initialInput = '' }: CommandProps): React.JSX.E
             </div>
           </div>
         ) : analysis.ok ? (
-          <p className="rounded-xl border border-border bg-card px-4 py-3 text-xs text-muted-foreground">
-            该表达式在未来 2 年内没有可推算的执行时间（例如限定了已过去的年份，或 `@reboot` 这类无时间语义的写法）。
+          <p className="rounded-xl border border-border bg-card px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+            <InlineText text={'该表达式在未来 2 年内没有可推算的执行时间（例如限定了已过去的年份，或 `@reboot` 这类无时间语义的写法）。'} />
           </p>
         ) : null}
 

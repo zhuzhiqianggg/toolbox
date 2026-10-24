@@ -281,7 +281,7 @@ export function RegexTester({ initialInput = '' }: CommandProps): React.JSX.Elem
   const useExample = (item: RegexExample, withText: boolean): void => {
     patch({
       pattern: item.pattern,
-      flags: item.flags.length > 0 ? item.flags.split('') : [''],
+      flags: item.flags.length > 0 ? item.flags.split('') : [],
       selected: `${item.group}/${item.label}`,
       ...(withText ? { test: item.text ?? DEFAULT_SAMPLE_TEXT } : {}),
       tab: 'matches',
@@ -352,7 +352,7 @@ export function RegexTester({ initialInput = '' }: CommandProps): React.JSX.Elem
           </div>
           {compiled.error !== null ? (
             <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-              {compiled.error}
+              {`正则无效：${compiled.error}`}
             </p>
           ) : null}
           <div className="flex flex-wrap items-center gap-3">

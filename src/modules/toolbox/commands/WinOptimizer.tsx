@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Crown, RotateCcw, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { CommandShell } from '@/components/CommandShell';
+import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toast';
 import { useCommandShell } from '@/hooks/useCommandShell';
 import { ipc } from '@/lib/ipc';
@@ -307,6 +308,9 @@ export function WinOptimizer(_props: CommandProps): React.JSX.Element {
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
             <TriangleAlert className="h-8 w-8 text-amber-500" />
             <p className="text-sm text-muted-foreground">{error}</p>
+            <Button variant="outline" size="sm" onClick={() => void refresh()}>
+              重试
+            </Button>
           </div>
         ) : (
           <>

@@ -43,7 +43,10 @@ function formatUuid(id: string, uppercase: boolean, dashes: boolean): string {
 }
 
 /**
- * UUID 生成器：批量产出 RFC 4122 v4 UUID，支持大小写与连字符开关，
+ * UUID 生成器：批量产出 RFC 4122 v4 UUID，支持大小写与连字符开关。
+ *
+ * 列表里只存**原始形态**（小写带连字符），大小写 / 连字符在渲染时套用 ——
+ * 这样切换开关立即生效，不必重新生成（重新生成会换掉整批值，违背用户预期）。
  * 每行可单独复制，标题栏「一键复制」复制全部。
  */
 export function UuidGenerator({ initialInput = '' }: CommandProps): React.JSX.Element {
@@ -58,11 +61,12 @@ export function UuidGenerator({ initialInput = '' }: CommandProps): React.JSX.El
   const [uppercase, setUppercase] = usePersistedState<boolean>(COMMAND_ID, 'uppercase', false);
   const [dashes, setDashes] = usePersistedState<boolean>(COMMAND_ID, 'dashes', true);
   /**
-   * 冷启动即出结果（V20）：打开工具先摆上 `initialCount` 条 UUID。
-   * 空表 + 一个「生成」按钮等于白白让用户多点一次 —— 示例本身就是说明。
+   * 冷启动即出结果（V20）：打开工具先摆上一批 UUID。
+   * 数量对齐持久化的 count（而非命令行参数），避免「输入框写着 10、列表只有 5 条」的错位；
+   * 持久化值可能被手动改坏，夹到 1-1000 防止首帧生成超大数组。
    */
   const [uuids, setUuids] = React.useState<string[]>(() =>
-    Array.from({ length: initialCount }, () => formatUuid(generateV4(), false, true)),
+    Array.from({ length: Math.min(1000, Math.max(1, count)) }, () => generateV4()),
   );
 
   /** 用**显式参数**生成，避免「先 setState 再调 generate」读到旧值的经典竞态（示例按钮依赖它） */
@@ -71,14 +75,20 @@ export function UuidGenerator({ initialInput = '' }: CommandProps): React.JSX.El
     setCount(safe);
     setUppercase(upper);
     setDashes(dash);
-    setUuids(Array.from({ length: safe }, () => formatUuid(generateV4(), upper, dash)));
+    setUuids(Array.from({ length: safe }, () => generateV4()));
   }, []);
 
   const generate = React.useCallback((): void => {
     generateWith(count, uppercase, dashes);
   }, [count, uppercase, dashes, generateWith]);
 
-  const copyTextValue = uuids.join('\n');
+  /** 渲染时统一应用大小写 / 连字符选项 */
+  const formatted = React.useMemo(
+    () => uuids.map((id) => formatUuid(id, uppercase, dashes)),
+    [uuids, uppercase, dashes],
+  );
+
+  const copyTextValue = formatted.join('\n');
 
   return (
     <CommandShell
@@ -89,7 +99,8 @@ export function UuidGenerator({ initialInput = '' }: CommandProps): React.JSX.El
       favorite={shell.favorite}
       onToggleFavorite={shell.onToggleFavorite}
       copyText={copyTextValue}
-      shortcutHint="设置数量后点击「生成」；每行可单独复制 · 打开即预生成若干条"
+      primaryAction={{ label: '生成', onClick: generate }}
+      shortcutHint="点「生成」或在数量框按 Enter 重新生成 · 大小写 / 连字符切换即时生效（Esc 返回）"
       samples={[
         {
           label: '5 条标准 v4',
@@ -123,6 +134,11 @@ export function UuidGenerator({ initialInput = '' }: CommandProps): React.JSX.El
               max={1000}
               value={count}
               onChange={(event) => setCount(Number.parseInt(event.target.value, 10) || 1)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  generate();
+                }
+              }}
               className="w-32"
             />
           </label>
@@ -140,20 +156,25 @@ export function UuidGenerator({ initialInput = '' }: CommandProps): React.JSX.El
         </div>
 
         {uuids.length > 0 ? (
-          <div className="overflow-auto rounded-md border scrollbar-thin">
-            <table className="w-full text-left text-xs">
-              <tbody>
-                {uuids.map((id, index) => (
-                  <tr key={`${id}-${index}`} className="border-b border-border last:border-0">
-                    <td className="px-2 py-1.5 font-mono text-foreground">{id}</td>
-                    <td className="px-2 py-1.5 text-right">
-                      <CopyButton text={id} label="复制" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="text-xs text-muted-foreground">
+              共 {uuids.length} 条 · 标题栏复制按钮可一次复制全部
+            </div>
+            <div className="overflow-auto rounded-md border scrollbar-thin">
+              <table className="w-full text-left text-xs">
+                <tbody>
+                  {formatted.map((id, index) => (
+                    <tr key={`${id}-${index}`} className="border-b border-border last:border-0">
+                      <td className="px-2 py-1.5 font-mono text-foreground">{id}</td>
+                      <td className="px-2 py-1.5 text-right">
+                        <CopyButton text={id} label="复制" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
             点击「生成」批量产出 UUID

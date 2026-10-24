@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Calculator as CalculatorIcon } from 'lucide-react';
 import { CommandShell } from '@/components/CommandShell';
+import { Button } from '@/components/ui/button';
 import { useCommandShell } from '@/hooks/useCommandShell';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import type { CommandProps } from '@/core/types';
@@ -285,6 +286,8 @@ interface HistoryItem {
 /**
  * 计算器：安全表达式求值（调度场算法，绝不 eval）。
  * 支持 + - * / % ^、括号、一元负号、函数（sqrt/abs/sin/.../min/max/pow）与常量 pi/e。
+ * 输入实时出结果；按 Enter（无 Shift）才把当前表达式记入历史，
+ * 避免输入过程中每个可求值的前缀（如 12、123）都刷进历史。
  */
 export function Calculator({ initialInput = '' }: CommandProps): React.JSX.Element {
   const shell = useCommandShell(COMMAND_ID);
@@ -312,15 +315,6 @@ export function Calculator({ initialInput = '' }: CommandProps): React.JSX.Eleme
     [setHistory],
   );
 
-  // 结果稳定且有效时，自动进历史（避免每次按键都刷屏，故用 effect 在 result 变化时记录）
-  const lastCommitted = React.useRef<string>('');
-  React.useEffect(() => {
-    if (result && !error && lastCommitted.current !== `${expr}=${result}`) {
-      lastCommitted.current = `${expr}=${result}`;
-      commitToHistory(expr, result);
-    }
-  }, [result, error, expr, commitToHistory]);
-
   const resultText = result || error || '';
 
   const insertToken = (token: string): void => {
@@ -337,7 +331,7 @@ export function Calculator({ initialInput = '' }: CommandProps): React.JSX.Eleme
       favorite={shell.favorite}
       onToggleFavorite={shell.onToggleFavorite}
       copyText={result}
-      shortcutHint="输入表达式实时计算；支持 sqrt/abs/sin/cos/tan/ln/log/min/max/pow 与 pi、e"
+      shortcutHint="输入实时计算 · Enter 记入历史 · 支持 sqrt/log/min/max/pow 与 pi、e（Esc 返回）"
       samples={[
         {
           label: '面积',
@@ -376,6 +370,10 @@ export function Calculator({ initialInput = '' }: CommandProps): React.JSX.Eleme
             onKeyDown={(event) => {
               if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
+                // Enter（无 Shift）把当前有效结果记入历史；无效表达式不记
+                if (result && !error) {
+                  commitToHistory(expr, result);
+                }
               }
             }}
           />
@@ -421,24 +419,40 @@ export function Calculator({ initialInput = '' }: CommandProps): React.JSX.Eleme
           </button>
         </div>
 
-        {history.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            <div className="text-xs text-muted-foreground">历史（点击回填）</div>
-            <div className="flex flex-col gap-1.5">
+        {/* 历史记录：Enter 显式记入；限高滚动避免长列表把页面撑长 */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">历史（点击回填，最多 20 条）</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-destructive"
+              disabled={history.length === 0}
+              onClick={() => setHistory([])}
+            >
+              清空历史
+            </Button>
+          </div>
+          {history.length === 0 ? (
+            <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+              暂无历史；输入表达式得出结果后按 Enter 记入
+            </div>
+          ) : (
+            <div className="scrollbar-thin flex max-h-[240px] flex-col gap-1.5 overflow-auto">
               {history.map((item, idx) => (
                 <button
                   key={`${item.expr}-${idx}`}
                   type="button"
                   onClick={() => setExpr(item.expr)}
-                  className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-muted"
+                  className="flex items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2 text-left transition-colors hover:bg-muted"
                 >
-                  <span className="font-mono text-xs text-muted-foreground">{item.expr}</span>
-                  <span className="font-mono text-sm text-foreground">= {item.result}</span>
+                  <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{item.expr}</span>
+                  <span className="shrink-0 font-mono text-sm text-foreground">= {item.result}</span>
                 </button>
               ))}
             </div>
-          </div>
-        ) : null}
+          )}
+        </div>
       </div>
     </CommandShell>
   );

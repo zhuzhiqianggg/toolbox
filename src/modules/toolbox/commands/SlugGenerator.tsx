@@ -55,6 +55,13 @@ export function SlugGenerator({ initialInput = '' }: CommandProps): React.JSX.El
     [input, separator, lowercase, romanize, maxLength],
   );
 
+  const hasInput = input.trim().length > 0;
+  /** 输入非空却拿不到 slug：最常见原因是关了拼音化、内容又全是中文 */
+  const noOutputHint =
+    hasInput && output.length === 0
+      ? '没有生成结果：内容里没有拉丁字母或数字；含中文请开启「拼音化」'
+      : '输入文本后自动生成';
+
   return (
     <CommandShell
       title="Slug 生成"
@@ -131,6 +138,7 @@ export function SlugGenerator({ initialInput = '' }: CommandProps): React.JSX.El
             rows={4}
             className="w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={input}
+            placeholder="输入文章标题 / 文件名，如：Toolbox 顺手 · 效率工具"
             onChange={(event) => setInput(event.target.value)}
           />
           <div className="flex flex-wrap items-end gap-4">
@@ -172,7 +180,12 @@ export function SlugGenerator({ initialInput = '' }: CommandProps): React.JSX.El
           </div>
         </div>
         <div className="flex min-w-0 flex-col gap-2">
-          <ResultBox title="Slug" value={output} emptyHint="输入文本后自动生成" mono />
+          <ResultBox
+            title={output.length > 0 ? `Slug（${output.length} 字符）` : 'Slug'}
+            value={output}
+            emptyHint={noOutputHint}
+            mono
+          />
         </div>
       </div>
     </CommandShell>

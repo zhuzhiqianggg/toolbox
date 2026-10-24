@@ -237,8 +237,9 @@ export function JwtDecoder({ initialInput = '' }: CommandProps): React.JSX.Eleme
       }}
       shortcutHint="粘贴 JWT 自动解码；填密钥点「验证签名」校验（Esc 返回）"
     >
-      {/* 1180×820 基准：两列并排，窄屏（<1280px）自动回退单列 */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      {/* 1180×820 基准：两列并排（左输入+验签 / 右解析结果），窄屏（<1024px）自动回退单列。
+          断点用 lg(1024) 而非 xl(1280)：工具页预设宽度就是 1180，用 xl 会在默认尺寸下退化成单列。 */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* ——— 左列：输入 + 验签 ——— */}
         <div className="flex min-w-0 flex-col gap-3">
           <div className="flex items-center justify-between gap-2">

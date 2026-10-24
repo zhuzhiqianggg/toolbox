@@ -76,26 +76,34 @@ function formatInZone(ms: number, timeZone: string, fmt: string): string | null 
   }
 }
 
-/** 相对时间描述（N秒/分钟/小时/天 前·后）。 */
+/**
+ * 相对时间描述（N秒/分钟/小时/天/月/年 前·后）。
+ * 月 / 年档位与「相对时间」工具同一套粒度——超过 30 天不再笼统显示「很久以前」。
+ */
 function relativeTime(ms: number): string {
   const diffSec = Math.floor((Date.now() - ms) / 1000);
+  const suffix = diffSec >= 0 ? '前' : '后';
   const abs = Math.abs(diffSec);
   if (abs < 60) {
-    return diffSec >= 0 ? `${diffSec}秒前` : `${abs}秒后`;
+    return `${abs}秒${suffix}`;
   }
-  const diffMin = Math.floor(diffSec / 60);
-  if (Math.abs(diffMin) < 60) {
-    return diffMin >= 0 ? `${diffMin}分钟前` : `${-diffMin}分钟后`;
+  const diffMin = Math.floor(abs / 60);
+  if (diffMin < 60) {
+    return `${diffMin}分钟${suffix}`;
   }
   const diffHour = Math.floor(diffMin / 60);
-  if (Math.abs(diffHour) < 24) {
-    return diffHour >= 0 ? `${diffHour}小时前` : `${-diffHour}小时后`;
+  if (diffHour < 24) {
+    return `${diffHour}小时${suffix}`;
   }
   const diffDay = Math.floor(diffHour / 24);
-  if (Math.abs(diffDay) < 30) {
-    return diffDay >= 0 ? `${diffDay}天前` : `${-diffDay}天后`;
+  if (diffDay < 30) {
+    return `${diffDay}天${suffix}`;
   }
-  return '很久以前';
+  const diffMonth = Math.floor(diffDay / 30);
+  if (diffMonth < 12) {
+    return `${diffMonth}个月${suffix}`;
+  }
+  return `${Math.floor(diffDay / 365)}年${suffix}`;
 }
 
 /** 指定时区的星期（中文短格式，如「周一」）。 */
@@ -450,7 +458,7 @@ export function TimestampConverter({ initialInput = '' }: CommandProps): React.J
 
   /**
    * 按**当前 Tab** 写入一个时刻 —— 绝不擅自切换 Tab。
-   * 时间戳 Tab 填 10 位秒，日期 Tab 填 `YYYY-MM-DD HH:mm:ss`。
+   * 时间戳 Tab 尊重当前单位（秒填 10 位 / 毫秒填 13 位，均可自动识别），日期 Tab 填 `YYYY-MM-DD HH:mm:ss`。
    */
   const fillMoment = React.useCallback(
     (ms: number): void => {
@@ -463,9 +471,9 @@ export function TimestampConverter({ initialInput = '' }: CommandProps): React.J
         setText(formatted);
         return;
       }
-      setText(String(Math.floor(ms / 1000)));
+      setText(unit === 'milliseconds' ? String(ms) : String(Math.floor(ms / 1000)));
     },
-    [mode, timezone],
+    [mode, timezone, unit],
   );
 
   /**
@@ -492,7 +500,7 @@ export function TimestampConverter({ initialInput = '' }: CommandProps): React.J
       setText(formatted);
       return;
     }
-    setText(String(Math.floor(newMs / 1000)));
+    setText(unit === 'milliseconds' ? String(newMs) : String(Math.floor(newMs / 1000)));
   }, [offsetValue, offsetForward, offsetUnit, single, batch, mode, unit, timezone]);
 
   /**
@@ -845,8 +853,8 @@ export function TimestampConverter({ initialInput = '' }: CommandProps): React.J
         ) : (
           <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
             {lines.length === 0
-              ? '输入时间戳或日期后自动转换'
-              : '无法识别输入，请检查格式'}
+              ? '输入时间戳或日期后自动转换，可多行批量'
+              : '无法识别输入：时间戳支持 10 位秒 / 13 位毫秒 / 相对偏移（如 +1d、-2h）；日期支持 2024-01-01 08:00:00 或 ISO 8601'}
           </div>
         )}
         </div>

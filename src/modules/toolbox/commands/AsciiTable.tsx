@@ -6,6 +6,7 @@ import { CopyButton } from '@/components/CopyButton';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCommandShell } from '@/hooks/useCommandShell';
+import { cn } from '@/lib/utils';
 import type { CommandProps } from '@/core/types';
 
 const COMMAND_ID = 'ascii-table';
@@ -88,6 +89,16 @@ function toTsv(infos: CharInfo[]): string {
   return [header, ...rows].join('\n');
 }
 
+/** 速查表单元格是否命中搜索词：十进制 / 十六进制 / 显示字符 / 控制字符名称。 */
+function cellMatchesQuery(code: number, query: string): boolean {
+  return (
+    String(code).includes(query) ||
+    code.toString(16).includes(query) ||
+    displayChar(code).toLowerCase().includes(query) ||
+    (CONTROL_NAMES[code] ?? '').toLowerCase().includes(query)
+  );
+}
+
 /**
  * ASCII 表 / 字符编码查询：粘贴文本逐字符查看十进制 / 十六进制 / 二进制码点，
  * 并内置 0-127 标准 ASCII 速查表（8×16 网格）。
@@ -96,10 +107,27 @@ export function AsciiTable({ initialInput = '' }: CommandProps): React.JSX.Eleme
   const shell = useCommandShell(COMMAND_ID);
   const [tab, setTab] = usePersistedState<string>(COMMAND_ID, 'tab', 'lookup');
   const [input, setInput] = usePersistedState<string>(COMMAND_ID, 'input', initialInput);
+  // 速查表搜索词（持久化：重开工具接着上次查）
+  const [tableQuery, setTableQuery] = usePersistedState<string>(COMMAND_ID, 'tableQuery', '');
 
   const infos = React.useMemo(() => toCharInfos(input), [input]);
   const tsv = React.useMemo(() => toTsv(infos), [infos]);
   const asciiCount = React.useMemo(() => infos.filter((info) => info.isAscii).length, [infos]);
+
+  // 搜索词小写化 + 命中计数（0-127 只扫一遍，代价可忽略）
+  const normalizedQuery = tableQuery.trim().toLowerCase();
+  const tableMatchCount = React.useMemo(() => {
+    if (normalizedQuery.length === 0) {
+      return 0;
+    }
+    let count = 0;
+    for (let code = 0; code <= 127; code += 1) {
+      if (cellMatchesQuery(code, normalizedQuery)) {
+        count += 1;
+      }
+    }
+    return count;
+  }, [normalizedQuery]);
 
   return (
     <CommandShell
@@ -152,6 +180,7 @@ export function AsciiTable({ initialInput = '' }: CommandProps): React.JSX.Eleme
             <textarea
               id="ascii-input"
               rows={3}
+              autoFocus
               className="w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               value={input}
               placeholder="粘贴任意文本，逐字符查看编码"
@@ -225,7 +254,21 @@ export function AsciiTable({ initialInput = '' }: CommandProps): React.JSX.Eleme
           )}
         </TabsContent>
 
-        <TabsContent value="table">
+        <TabsContent value="table" className="flex flex-col gap-2">
+          {/* 搜索框：数字 / 十六进制 / 字符 / 控制字符名称均可命中，匹配单元格高亮 */}
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              autoFocus
+              value={tableQuery}
+              onChange={(event) => setTableQuery(event.target.value)}
+              placeholder="搜索：十进制 / 十六进制 / 字符 / 名称，如 65、41、A、LF"
+              className="h-9 min-w-0 flex-1 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            {normalizedQuery.length > 0 ? (
+              <span className="shrink-0 text-xs text-muted-foreground">命中 {tableMatchCount} 个</span>
+            ) : null}
+          </div>
           <div className="overflow-auto rounded-md border scrollbar-thin">
             <table className="w-full border-collapse text-center text-xs font-mono">
               <thead>
@@ -246,8 +289,13 @@ export function AsciiTable({ initialInput = '' }: CommandProps): React.JSX.Eleme
                     </td>
                     {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((col) => {
                       const code = row * 16 + col;
+                      const hit = normalizedQuery.length > 0 && cellMatchesQuery(code, normalizedQuery);
                       return (
-                        <td key={col} className="px-1 py-1 text-foreground" title={CONTROL_NAMES[code] ?? undefined}>
+                        <td
+                          key={col}
+                          title={CONTROL_NAMES[code] ?? undefined}
+                          className={cn('px-1 py-1 text-foreground', hit && 'bg-brand/15')}
+                        >
                           <span className="font-medium">{displayChar(code)}</span>
                           <span className="ml-0.5 text-[10px] text-muted-foreground">{code}</span>
                         </td>
@@ -258,8 +306,8 @@ export function AsciiTable({ initialInput = '' }: CommandProps): React.JSX.Eleme
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            控制字符以「·」显示，空格显示为「␣」；悬停可查看控制字符名称。
+          <p className="text-xs text-muted-foreground">
+            控制字符以「·」显示，空格显示为「␣」；悬停可查看控制字符名称，搜索命中的单元格高亮。
           </p>
         </TabsContent>
       </Tabs>

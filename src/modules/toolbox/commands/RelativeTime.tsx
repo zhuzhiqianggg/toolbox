@@ -55,6 +55,7 @@ function parseDateInput(raw: string): Date | null {
   return Number.isNaN(parsed) ? null : new Date(parsed);
 }
 
+/** 单位 → 秒数（中英文写法都收，mo 用 30 天近似）。 */
 const UNIT_FACTORS: Record<string, number> = {
   s: 1,
   秒: 1,
@@ -116,6 +117,46 @@ function parseRelativeExpr(raw: string): Date | null {
   return new Date(Date.now() + delta);
 }
 
+/** 结果统一形态：ok=false 时 text 是给用户看的错误说明（不进结果区、不可复制）。 */
+interface ParseOutcome {
+  ok: boolean;
+  text: string;
+}
+
+/** 日期输入 → 相对描述（附「解析为」一行，方便核对时间戳被理解成了哪个时刻）。 */
+function buildDescribe(raw: string): ParseOutcome {
+  const token = raw.trim();
+  if (token.length === 0) {
+    return { ok: true, text: '' };
+  }
+  const date = parseDateInput(token);
+  if (!date) {
+    return {
+      ok: false,
+      text: '无法识别日期：支持 10 位秒 / 13 位毫秒时间戳，或 2024-01-01 08:00:00 这类日期串',
+    };
+  }
+  return { ok: true, text: `${zhRelative(date, new Date())}\n解析为：${toLocalInput(date)}` };
+}
+
+/** 相对表达式 → 具体时刻（本地 / ISO / 相对描述三行）。 */
+function buildExpr(raw: string): ParseOutcome {
+  if (raw.trim().length === 0) {
+    return { ok: true, text: '' };
+  }
+  const date = parseRelativeExpr(raw);
+  if (!date) {
+    return {
+      ok: false,
+      text: '无法解析：支持 in 2h / +2h / 2小时后 / -1d / 3天前 / 1.5小时 这类写法',
+    };
+  }
+  return {
+    ok: true,
+    text: `本地：${date.toLocaleString()}\nISO：${date.toISOString()}\n相对：${zhRelative(date, new Date())}`,
+  };
+}
+
 /**
  * 相对时间：日期 → 「3天前」人性化描述；或解析「in 2h / 2小时后」为具体时间。
  * 纯前端，中文输出。
@@ -126,32 +167,22 @@ export function RelativeTime({ initialInput = '' }: CommandProps): React.JSX.Ele
   const [dateInput, setDateInput] = usePersistedState<string>(COMMAND_ID, 'dateInput', initialInput);
   const [exprInput, setExprInput] = usePersistedState<string>(COMMAND_ID, 'exprInput', '');
 
-  const describe = React.useMemo<string>(() => {
-    if (!dateInput.trim()) {
-      return '';
-    }
-    const date = parseDateInput(dateInput);
-    if (!date) {
-      return '无法识别日期，支持时间戳(10/13位)或 2024-01-01 08:00:00';
-    }
-    return zhRelative(date, new Date());
-  }, [dateInput]);
-
-  const exprResult = React.useMemo<{ text: string; ok: boolean }>(() => {
-    if (!exprInput.trim()) {
-      return { text: '', ok: false };
-    }
-    const date = parseRelativeExpr(exprInput);
-    if (!date) {
-      return { text: '无法解析，支持 in 2h / +2h / 2小时后 / -1d / 3天前', ok: false };
-    }
-    return {
-      text: `本地：${date.toLocaleString()}\nISO：${date.toISOString()}\n相对：${zhRelative(date, new Date())}`,
-      ok: true,
+  // 每 30 秒强制重渲染一次，让「N分钟前」跟随当前时间变新。
+  // 解析放在渲染期（而非 useMemo）正是为了让 tick 能刷新它。
+  const [, setTick] = React.useState<number>(0);
+  React.useEffect(() => {
+    const timer = window.setInterval(() => setTick((tick) => tick + 1), 30_000);
+    return () => {
+      window.clearInterval(timer);
     };
-  }, [exprInput]);
+  }, []);
 
-  const copyText = tab === 'describe' ? describe : exprResult.text;
+  const describe = buildDescribe(dateInput);
+  const exprResult = buildExpr(exprInput);
+
+  // 一键复制只取当前 Tab 的有效结果；错误说明不进剪贴板
+  const active = tab === 'describe' ? describe : exprResult;
+  const copyText = active.ok ? active.text : '';
 
   const onTabChange = React.useCallback((value: string): void => {
     setTab(value);
@@ -179,7 +210,7 @@ export function RelativeTime({ initialInput = '' }: CommandProps): React.JSX.Ele
       favorite={shell.favorite}
       onToggleFavorite={shell.onToggleFavorite}
       copyText={copyText}
-      shortcutHint="上方切换「描述 / 解析」；结果可一键复制"
+      shortcutHint="相对描述每 30 秒自动刷新；结果可一键复制"
       samples={
         tab === 'describe'
           ? [
@@ -232,6 +263,11 @@ export function RelativeTime({ initialInput = '' }: CommandProps): React.JSX.Ele
                 placeholder="2024-01-01 08:00:00 或 1704067200"
                 onChange={(event) => setDateInput(event.target.value)}
               />
+              {!describe.ok ? (
+                <p role="alert" className="text-xs text-destructive">
+                  {describe.text}
+                </p>
+              ) : null}
               <Button variant="ghost" size="sm" className="self-start" onClick={fillNow}>
                 填入当前时间
               </Button>
@@ -239,7 +275,7 @@ export function RelativeTime({ initialInput = '' }: CommandProps): React.JSX.Ele
             <div className="flex min-w-0 flex-col gap-2">
               <ResultBox
                 title="相对描述"
-                value={describe}
+                value={describe.ok ? describe.text : ''}
                 emptyHint="输入日期后自动计算"
                 mono={false}
               />
@@ -261,12 +297,17 @@ export function RelativeTime({ initialInput = '' }: CommandProps): React.JSX.Ele
                 placeholder="in 2h / +2h / 2小时后 / -1d / 3天前"
                 onChange={(event) => setExprInput(event.target.value)}
               />
+              {!exprResult.ok ? (
+                <p role="alert" className="text-xs text-destructive">
+                  {exprResult.text}
+                </p>
+              ) : null}
             </div>
             <div className="flex min-w-0 flex-col gap-2">
               <ResultBox
                 title="解析结果"
-                value={exprResult.text}
-                emptyHint={exprResult.ok ? '输入后解析' : '输入相对表达式'}
+                value={exprResult.ok ? exprResult.text : ''}
+                emptyHint="输入相对表达式后自动解析"
                 mono
               />
             </div>

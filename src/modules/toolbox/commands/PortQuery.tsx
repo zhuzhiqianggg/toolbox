@@ -1,11 +1,11 @@
 import * as React from 'react';
-import { Network as NetworkIcon, RefreshCw, Copy } from 'lucide-react';
+import { Network as NetworkIcon, RefreshCw, Copy, X } from 'lucide-react';
 import { CommandShell, type SampleEntry } from '@/components/CommandShell';
 import { Button } from '@/components/ui/button';
 import { useCommandShell } from '@/hooks/useCommandShell';
 import { useToolState } from '@/hooks/useToolState';
 import { ipc, type PortEntry } from '@/lib/ipc';
-import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { copyText } from '@/lib/clipboard';
 import type { CommandProps } from '@/core/types';
 
 const COMMAND_ID = 'port-query';
@@ -89,8 +89,20 @@ export function PortQuery({ initialInput = '' }: CommandProps): React.JSX.Elemen
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
             placeholder="过滤：端口 / 进程名 / PID，如 8080、chrome"
+            aria-label="过滤端口占用"
             className="h-9 flex-1 rounded-md border border-input bg-transparent px-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
+          {filter.length > 0 ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="清除过滤"
+              onClick={() => setFilter('')}
+            >
+              <X className="h-3.5 w-3.5" />
+              清除
+            </Button>
+          ) : null}
           <Button variant="outline" size="sm" onClick={() => void load()} disabled={loading}>
             <RefreshCw className={'h-3.5 w-3.5' + (loading ? ' animate-spin' : '')} />
             刷新
@@ -135,7 +147,7 @@ export function PortQuery({ initialInput = '' }: CommandProps): React.JSX.Elemen
                       aria-label="复制结束命令"
                       title={taskkillCmd(e)}
                       onClick={() => {
-                        void writeText(taskkillCmd(e));
+                        void copyText(taskkillCmd(e));
                       }}
                     >
                       <Copy className="h-3.5 w-3.5" />
@@ -143,6 +155,13 @@ export function PortQuery({ initialInput = '' }: CommandProps): React.JSX.Elemen
                   </td>
                 </tr>
               ))}
+              {loading && filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-3 py-8 text-center text-sm text-muted-foreground">
+                    正在读取端口占用…
+                  </td>
+                </tr>
+              ) : null}
               {filtered.length === 0 && !loading ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-8 text-center text-sm text-muted-foreground">

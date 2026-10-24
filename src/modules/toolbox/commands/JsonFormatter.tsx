@@ -328,6 +328,9 @@ function JsonTree({
   onCopy: (text: string, label: string) => void;
 }): React.JSX.Element {
   const counter = React.useMemo<{ used: number }>(() => ({ used: 0 }), [value]);
+  // 每次渲染前清零：TreeNode 在渲染期递增计数（渲染非幂等），
+  // StrictMode 下同一棵树会渲染两遍，不清零会让节点上限提前耗尽。
+  counter.used = 0;
   return (
     <TreeNode
       name={null}

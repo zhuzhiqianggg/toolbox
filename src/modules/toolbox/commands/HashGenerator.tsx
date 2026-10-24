@@ -148,6 +148,8 @@ export function HashGenerator({ initialInput = '' }: CommandProps): React.JSX.El
   // 校验模式
   const [expected, setExpected] = usePersistedState<string>(COMMAND_ID, 'expected', '');
   const [verifyAlgo, setVerifyAlgo] = usePersistedState<HashAlgo | 'auto'>(COMMAND_ID, 'verifyAlgo', 'auto');
+  // 展示层大写开关：只影响显示 / 复制 / 导出，历史与校验比对始终用原始小写
+  const [uppercase, setUppercase] = usePersistedState<boolean>(COMMAND_ID, 'uppercase', false);
 
   const subtleOk = React.useMemo<boolean>(hasSubtleCrypto, []);
   /** 计算竞态序号：快速输入时只认最后一次计算的结果。 */
@@ -300,26 +302,38 @@ export function HashGenerator({ initialInput = '' }: CommandProps): React.JSX.El
       : { state: 'fail', algo, message: `与 ${algo} 结果不一致，校验失败` };
   }, [expected, verifyAlgo, digests]);
 
+  /** 展示用摘要：按大写开关转换（复制 / 导出 / 卡片渲染共用）。 */
+  const displayDigests = React.useMemo<Record<HashAlgo, string>>(() => {
+    if (!uppercase) {
+      return digests;
+    }
+    const out = emptyDigests();
+    for (const algo of HASH_ALGOS) {
+      out[algo] = digests[algo].toUpperCase();
+    }
+    return out;
+  }, [digests, uppercase]);
+
   /** 一键复制：默认取 SHA-256（最常用）。 */
-  const copyText = React.useMemo<string>(() => digests['SHA-256'] ?? '', [digests]);
+  const copyText = React.useMemo<string>(() => displayDigests['SHA-256'] ?? '', [displayDigests]);
 
   /** 下载全部摘要为 .txt。 */
   const handleDownload = React.useCallback((): void => {
-    const anyDigest = HASH_ALGOS.some((algo) => digests[algo].length > 0);
+    const anyDigest = HASH_ALGOS.some((algo) => displayDigests[algo].length > 0);
     if (!anyDigest) {
       toast.error('暂无可下载的摘要结果');
       return;
     }
     const ok = downloadTextFile(
       `toolbox-hash-${timestampSuffix()}.txt`,
-      digestsToText(digests, sourceLabel),
+      digestsToText(displayDigests, sourceLabel),
     );
     if (ok) {
       toast.success('摘要已导出为 .txt');
     } else {
       toast.error('导出失败，请重试');
     }
-  }, [digests, sourceLabel]);
+  }, [displayDigests, sourceLabel]);
 
   /** 历史回填：文本记录可直接恢复原文；文件记录只能提示（字节不入库）。 */
   const handleApplyHistory = React.useCallback(
@@ -573,10 +587,21 @@ export function HashGenerator({ initialInput = '' }: CommandProps): React.JSX.El
               计算结果
               <span className="ml-2 text-xs font-normal text-muted-foreground">{sourceLabel}</span>
             </span>
-            <Button size="sm" variant="ghost" onClick={handleDownload}>
-              <Download className="mr-1.5 h-3.5 w-3.5" />
-              下载 .txt
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                size="sm"
+                variant={uppercase ? 'secondary' : 'ghost'}
+                className="h-7 px-2 text-xs"
+                title="摘要以大写十六进制展示（校验比对与历史记录不受影响）"
+                onClick={() => setUppercase((current) => !current)}
+              >
+                大写
+              </Button>
+              <Button size="sm" variant="ghost" onClick={handleDownload}>
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+                下载 .txt
+              </Button>
+            </div>
           </div>
 
           {busy ? (
@@ -587,7 +612,7 @@ export function HashGenerator({ initialInput = '' }: CommandProps): React.JSX.El
           ) : null}
 
           {HASH_ALGOS.map((algo) => (
-            <HashCard key={algo} algo={algo} digest={digests[algo]} />
+            <HashCard key={algo} algo={algo} digest={displayDigests[algo]} />
           ))}
 
           {!subtleOk ? (

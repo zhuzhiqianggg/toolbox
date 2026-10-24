@@ -11,7 +11,6 @@ import { useToolHistory, type ToolHistoryEntry } from '@/hooks/useToolHistory';
 import type { CommandProps } from '@/core/types';
 import { cn } from '@/lib/utils';
 import {
-  URL_EXAMPLES,
   URL_METHODS,
   URL_REFERENCE_ROWS,
   buildUrl,
@@ -82,7 +81,7 @@ function PartField({
 /**
  * URL 编解码（对齐 ops-tools 的 UrlConverter 并保留我们更强的 query 解析）：
  * 三种编码方法、结构化六段编辑与重建、有效性徽章、输入统计、
- * 4 个示例一键填充、22 行常用字符编码对照表、最近 20 条转换历史。
+ * 22 行常用字符编码对照表、最近 20 条转换历史。
  */
 export function UrlCodec({ initialInput = '' }: CommandProps): React.JSX.Element {
   const shell = useCommandShell(COMMAND_ID);
@@ -389,27 +388,6 @@ export function UrlCodec({ initialInput = '' }: CommandProps): React.JSX.Element
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* 示例 */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-muted-foreground">示例（点击填充）</span>
-            <div className="flex flex-wrap gap-1.5">
-              {URL_EXAMPLES.map((item) => (
-                <Button
-                  key={item.label}
-                  size="sm"
-                  variant="secondary"
-                  className="h-7 px-2.5 text-xs"
-                  onClick={() => {
-                    setInput(item.value);
-                    setMode('decode');
-                  }}
-                >
-                  {item.label}
-                </Button>
-              ))}
-            </div>
           </div>
         </div>
 

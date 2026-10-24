@@ -30,8 +30,14 @@ export function FileSize({ initialInput = '' }: CommandProps): React.JSX.Element
   }, [base2]);
 
   const bytesNum = Number.parseFloat(bytesInput);
+  // 非空但不是合法非负数字（负数 / 非法格式）时明确报错，与「空输入」的空态区分开
+  const b2hInvalid =
+    bytesInput.trim().length > 0 && (!Number.isFinite(bytesNum) || bytesNum < 0);
   const b2hList = React.useMemo(() => formatAllUnits(bytesNum, base2), [bytesNum, base2]);
 
+  const valueNum = Number.parseFloat(valueInput);
+  const h2bInvalid =
+    valueInput.trim().length > 0 && (!Number.isFinite(valueNum) || valueNum < 0);
   const h2bResult = React.useMemo<string>(
     () => toBytesText(Number.parseFloat(valueInput), unit, base2),
     [valueInput, unit, base2],
@@ -130,9 +136,21 @@ export function FileSize({ initialInput = '' }: CommandProps): React.JSX.Element
                   value={bytesInput}
                   onChange={(event) => setBytesInput(event.target.value)}
                   placeholder="1048576"
+                  className={b2hInvalid ? 'border-destructive focus-visible:ring-destructive' : undefined}
+                  aria-invalid={b2hInvalid}
                 />
+                {b2hInvalid ? (
+                  <p role="alert" className="text-xs text-destructive">
+                    字节数需为非负数字（负数或非数字无法换算）
+                  </p>
+                ) : null}
               </div>
-              <ResultBox title="易读结果" value={b2hList} emptyHint="输入字节数后自动换算" mono />
+              <ResultBox
+                title="易读结果"
+                value={b2hList}
+                emptyHint={b2hInvalid ? '等待合法的字节数' : '输入字节数后自动换算'}
+                mono
+              />
             </div>
           </TabsContent>
 
@@ -145,10 +163,18 @@ export function FileSize({ initialInput = '' }: CommandProps): React.JSX.Element
                 <Input
                   id="fs-value"
                   type="number"
+                  min={0}
                   value={valueInput}
                   onChange={(event) => setValueInput(event.target.value)}
                   placeholder="1"
+                  className={h2bInvalid ? 'border-destructive focus-visible:ring-destructive' : undefined}
+                  aria-invalid={h2bInvalid}
                 />
+                {h2bInvalid ? (
+                  <p role="alert" className="text-xs text-destructive">
+                    数值需为非负数字（负数或非数字无法换算）
+                  </p>
+                ) : null}
                 <label className="flex flex-col gap-1 text-xs text-muted-foreground">
                   单位
                   <select
@@ -164,7 +190,12 @@ export function FileSize({ initialInput = '' }: CommandProps): React.JSX.Element
                   </select>
                 </label>
               </div>
-              <ResultBox title="字节结果" value={h2bResult} emptyHint="输入数值与单位后换算" mono />
+              <ResultBox
+                title="字节结果"
+                value={h2bResult}
+                emptyHint={h2bInvalid ? '等待合法的数值' : '输入数值与单位后换算'}
+                mono
+              />
             </div>
           </TabsContent>
         </Tabs>

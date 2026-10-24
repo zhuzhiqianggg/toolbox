@@ -190,6 +190,7 @@ export function UrlParser({ initialInput = '' }: CommandProps): React.JSX.Elemen
       onBack={shell.onBack}
       favorite={shell.favorite}
       onToggleFavorite={shell.onToggleFavorite}
+      onPaste={(text) => patch({ input: text })}
       getCopyText={getCopyTextValue}
       shortcutHint="输入即实时解析 · 密码打码显示、复制出原值 · Esc 返回"
       samples={samples}

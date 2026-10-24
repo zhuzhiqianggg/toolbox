@@ -3,7 +3,9 @@ import { usePersistedState } from '@/hooks/usePersistedState';
 import { FileCode } from 'lucide-react';
 import { CommandShell } from '@/components/CommandShell';
 import { ResultBox } from '@/components/ResultBox';
+import { Button } from '@/components/ui/button';
 import { useCommandShell } from '@/hooks/useCommandShell';
+import { locateJsonError } from '@/lib/jsonLocate';
 import type { CommandProps } from '@/core/types';
 
 const COMMAND_ID = 'json-to-ts';
@@ -91,6 +93,15 @@ function buildInterface(obj: Record<string, unknown>, name: string, state: Build
   state.interfaces.push(lines.join('\n'));
 }
 
+/** 从 `JSON.parse` 失败中定位行列（与 JsonFormatter 同款扫描器） */
+function describeError(raw: string, message: string): string {
+  const spot = locateJsonError(raw);
+  if (spot === null) {
+    return message;
+  }
+  return `第 ${spot.line} 行第 ${spot.column} 列：${spot.reason}\n${spot.snippet}`;
+}
+
 /** 解析 JSON 并生成 TypeScript 接口文本。 */
 function convert(input: string): { ok: boolean; ts: string; error?: string } {
   const trimmed = input.trim();
@@ -101,7 +112,8 @@ function convert(input: string): { ok: boolean; ts: string; error?: string } {
   try {
     parsed = JSON.parse(trimmed);
   } catch (cause) {
-    return { ok: false, ts: '', error: cause instanceof Error ? cause.message : 'JSON 解析失败' };
+    const message = cause instanceof Error ? cause.message : 'JSON 解析失败';
+    return { ok: false, ts: '', error: describeError(trimmed, message) };
   }
   const state: BuildState = { interfaces: [], used: new Set() };
   if (Array.isArray(parsed)) {
@@ -141,6 +153,7 @@ export function JsonToTs({ initialInput = '' }: CommandProps): React.JSX.Element
       onBack={shell.onBack}
       favorite={shell.favorite}
       onToggleFavorite={shell.onToggleFavorite}
+      fill
       copyText={result.ok ? result.ts : ''}
       shortcutHint="支持嵌套对象与数组；结果可一键复制"
       samples={[
@@ -192,30 +205,47 @@ export function JsonToTs({ initialInput = '' }: CommandProps): React.JSX.Element
         },
       ]}
     >
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="flex min-w-0 flex-col gap-2">
-          <label className="text-sm font-medium text-foreground" htmlFor="json-input">
-            JSON
-          </label>
+      {/* 撑满模式（与 JsonFormatter 同款布局）：长 JSON / 长接口随窗口伸缩滚动 */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="flex min-h-0 min-w-0 flex-col gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="json-input">
+              JSON
+            </label>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs text-muted-foreground"
+              onClick={() => setInput('')}
+            >
+              清空
+            </Button>
+          </div>
           <textarea
             id="json-input"
             autoFocus
-            rows={14}
-            className="w-full min-h-0 flex-1 rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            spellCheck={false}
+            className="w-full min-h-[200px] flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={input}
             placeholder={'{\n  "id": 1,\n  "name": "Toolbox",\n  "tags": ["a", "b"]\n}'}
             onChange={(event) => setInput(event.target.value)}
           />
-          {input.trim() && !result.ok ? (
-            <p className="text-xs text-destructive">JSON 解析失败：{result.error}</p>
+          {input.trim() && !result.ok && result.error ? (
+            <div
+              role="alert"
+              className="scrollbar-thin max-h-[120px] overflow-auto whitespace-pre-wrap rounded-lg border border-destructive/40 bg-destructive/5 p-2.5 font-mono text-xs text-destructive"
+            >
+              {`语法错误：${result.error}`}
+            </div>
           ) : null}
         </div>
-        <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex min-h-0 min-w-0 flex-col gap-2">
           <ResultBox
             title="TypeScript 接口"
             value={result.ok ? result.ts : ''}
-            emptyHint={input.trim() ? 'JSON 无效' : '粘贴 JSON 后自动生成'}
+            emptyHint={input.trim() ? 'JSON 无效，请修正后重试' : '粘贴 JSON 后自动生成'}
             mono
+            fill
           />
         </div>
       </div>

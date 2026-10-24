@@ -671,6 +671,7 @@ function ToggleChip({
       type="button"
       onClick={onClick}
       title={title}
+      aria-pressed={active}
       className={cn(
         'rounded-md border px-2 py-0.5 text-xs transition-colors',
         active
@@ -1072,6 +1073,7 @@ export function TextDiff({ initialInput = '' }: CommandProps): React.JSX.Element
               <button
                 key={item}
                 type="button"
+                aria-pressed={mode === item}
                 onClick={() => patch({ mode: item })}
                 className={cn(
                   'rounded-md px-2 py-1 text-xs transition-colors',
@@ -1097,6 +1099,7 @@ export function TextDiff({ initialInput = '' }: CommandProps): React.JSX.Element
               <button
                 key={item.value}
                 type="button"
+                aria-pressed={granularity === item.value}
                 onClick={() => patch({ granularity: item.value })}
                 className={cn(
                   'rounded-md px-2 py-1 text-xs transition-colors',
@@ -1458,11 +1461,12 @@ export function TextDiff({ initialInput = '' }: CommandProps): React.JSX.Element
 
         {/* ——— 底部操作 ——— */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="outline" onClick={() => downloadFile('toolbox-diff-left.txt', normalizedA)}>
+          {/* 下载导出原始输入（而非按忽略选项归一化后的文本），避免导出内容与粘贴内容不一致 */}
+          <Button size="sm" variant="outline" onClick={() => downloadFile('toolbox-diff-left.txt', textA)}>
             <Download className="h-3.5 w-3.5" />
             下载左侧
           </Button>
-          <Button size="sm" variant="outline" onClick={() => downloadFile('toolbox-diff-right.txt', normalizedB)}>
+          <Button size="sm" variant="outline" onClick={() => downloadFile('toolbox-diff-right.txt', textB)}>
             <Download className="h-3.5 w-3.5" />
             下载右侧
           </Button>

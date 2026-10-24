@@ -72,6 +72,10 @@ export function CaseConverter({ initialInput = '' }: CommandProps): React.JSX.El
     }, {} as Record<CaseKind, string>);
   }, [input]);
 
+  /** 拆词结果（给用户反馈：六种风格都基于这几个词重排，拆错了这里一眼看出） */
+  const wordCount = React.useMemo(() => splitWords(input).length, [input]);
+  const hasInput = input.trim().length > 0;
+
   return (
     <CommandShell
       title="大小写转换"
@@ -108,9 +112,16 @@ export function CaseConverter({ initialInput = '' }: CommandProps): React.JSX.El
     >
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-foreground" htmlFor="case-input">
-            输入文本
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-foreground" htmlFor="case-input">
+              输入文本
+            </label>
+            {hasInput ? (
+              <span className="text-xs text-muted-foreground">
+                检测到 {wordCount} 个单词{wordCount === 0 ? '，没有可识别的字母或数字' : ''}
+              </span>
+            ) : null}
+          </div>
           <textarea
             id="case-input"
             rows={3}
@@ -120,17 +131,23 @@ export function CaseConverter({ initialInput = '' }: CommandProps): React.JSX.El
             onChange={(event) => setInput(event.target.value)}
           />
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {(Object.keys(CASE_LABELS) as CaseKind[]).map((kind) => (
-            <div key={kind} className="flex flex-col gap-1 rounded-md border border-border bg-card p-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{CASE_LABELS[kind]}</span>
-                <CopyButton text={results[kind]} disabled={!results[kind]} label="复制" />
+        {hasInput ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {(Object.keys(CASE_LABELS) as CaseKind[]).map((kind) => (
+              <div key={kind} className="flex flex-col gap-1 rounded-md border border-border bg-card p-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{CASE_LABELS[kind]}</span>
+                  <CopyButton text={results[kind]} disabled={!results[kind]} label="复制" />
+                </div>
+                <code className="break-all font-mono text-sm text-foreground">{results[kind] || '—'}</code>
               </div>
-              <code className="break-all font-mono text-sm text-foreground">{results[kind] || '—'}</code>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-6 text-center text-sm text-muted-foreground">
+            输入一个变量名、字段名或任意短语，上方六种命名风格会实时生成，每条可单独复制
+          </p>
+        )}
       </div>
     </CommandShell>
   );

@@ -2,9 +2,11 @@ import * as React from 'react';
 import { History as HistoryIcon, Copy, Trash2, Eraser } from 'lucide-react';
 import { CommandShell } from '@/components/CommandShell';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { useCommandShell } from '@/hooks/useCommandShell';
 import { usePersistedState } from '@/hooks/usePersistedState';
-import { readText, writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { copyText } from '@/lib/clipboard';
+import { readText } from '@tauri-apps/plugin-clipboard-manager';
 import type { CommandProps } from '@/core/types';
 
 const COMMAND_ID = 'clipboard-history';
@@ -87,12 +89,14 @@ export function ClipboardHistory({}: CommandProps): React.JSX.Element {
   }, []);
 
   const copyEntry = React.useCallback(async (text: string): Promise<void> => {
-    try {
-      await writeText(text);
-      lastSeenRef.current = text;
-    } catch {
-      /* 忽略 */
+    const ok = await copyText(text);
+    if (!ok) {
+      toast.error('复制失败，请手动选择文本复制');
+      return;
     }
+    // 仅在写成功后同步 lastSeen，避免「写失败还被当成已观察过」而漏记后续复制
+    lastSeenRef.current = text;
+    toast.success('已复制到剪贴板');
   }, []);
 
   const removeEntry = React.useCallback(

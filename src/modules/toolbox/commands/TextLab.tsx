@@ -348,6 +348,14 @@ export function TextLab({ initialInput = '' }: CommandProps): React.JSX.Element 
     commit(result.text, `已替换 ${result.count} 处`);
   };
 
+  /** 查找 / 替换框里按 Enter 直接触发「全部替换」（输入法组词中不拦截） */
+  const handleFindKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      doReplace();
+    }
+  };
+
   const doExtract = (): void => {
     const result = extractMatches(state.text, read, 0, false);
     if (!result.ok) {
@@ -575,6 +583,7 @@ export function TextLab({ initialInput = '' }: CommandProps): React.JSX.Element 
                       value={state.find}
                       spellCheck={false}
                       onChange={(event) => patch({ find: event.target.value })}
+                      onKeyDown={handleFindKeyDown}
                       placeholder={state.regex ? 'ERROR|WARN 或 \\d+\\.\\d+' : '输入要查找的文本'}
                       className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 font-mono text-xs text-foreground"
                     />
@@ -587,7 +596,8 @@ export function TextLab({ initialInput = '' }: CommandProps): React.JSX.Element 
                       value={state.replace}
                       spellCheck={false}
                       onChange={(event) => patch({ replace: event.target.value })}
-                      placeholder="留空 = 删除匹配内容"
+                      onKeyDown={handleFindKeyDown}
+                      placeholder="留空 = 删除匹配内容（按 Enter 直接替换）"
                       className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 font-mono text-xs text-foreground"
                     />
                   </label>

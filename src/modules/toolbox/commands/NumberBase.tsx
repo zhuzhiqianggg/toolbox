@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Copy, Sigma as SigmaIcon } from 'lucide-react';
 import { CommandShell, type SampleEntry } from '@/components/CommandShell';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { useCommandShell } from '@/hooks/useCommandShell';
 import { useToolState } from '@/hooks/useToolState';
 import { copyText } from '@/lib/clipboard';
@@ -65,6 +66,17 @@ function detectRadixLabel(cleaned: string): string {
   return '十进制';
 }
 
+/** 复制到剪贴板并给出 Toast 反馈（行内复制按钮此前成功/失败都无任何提示）。 */
+function copyWithFeedback(text: string): void {
+  void copyText(text).then((ok) => {
+    if (ok) {
+      toast.success('已复制到剪贴板');
+    } else {
+      toast.error('复制失败，请手动选择文本复制');
+    }
+  });
+}
+
 interface ResultRowProps {
   label: string;
   value: string;
@@ -84,9 +96,7 @@ function ResultRow({ label, value }: ResultRowProps): React.JSX.Element {
         className="h-7 w-7 shrink-0"
         aria-label={`复制${label}`}
         title={`复制${label}`}
-        onClick={() => {
-          void copyText(value);
-        }}
+        onClick={() => copyWithFeedback(value)}
       >
         <Copy className="h-3.5 w-3.5" />
       </Button>
@@ -162,6 +172,16 @@ export function NumberBase({ initialInput = '' }: CommandProps): React.JSX.Eleme
         apply: () => commit('0b1010_1010'),
       },
       { label: '2024', description: '普通十进制，四行进制结果一眼对照', apply: () => commit('2024') },
+      {
+        label: '9007199254740993',
+        description: '超过 2^53 的大数 —— Number 会静默丢精度，这里由 BigInt 精确保留',
+        apply: () => commit('9007199254740993'),
+      },
+      {
+        label: '-0o17',
+        description: '负数 + 八进制前缀组合，四行结果同步带符号',
+        apply: () => commit('-0o17'),
+      },
     ],
     [commit],
   );
@@ -241,9 +261,7 @@ export function NumberBase({ initialInput = '' }: CommandProps): React.JSX.Eleme
                   className="h-7 w-7 shrink-0"
                   aria-label="复制自定义进制结果"
                   title="复制自定义进制结果"
-                  onClick={() => {
-                    void copyText(customValue);
-                  }}
+                  onClick={() => copyWithFeedback(customValue)}
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </Button>

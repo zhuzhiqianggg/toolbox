@@ -3,10 +3,11 @@ import { usePersistedState } from '@/hooks/usePersistedState';
 import { Table2 } from 'lucide-react';
 import { CommandShell } from '@/components/CommandShell';
 import { ResultBox } from '@/components/ResultBox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useCommandShell } from '@/hooks/useCommandShell';
 import { toast } from '@/components/ui/toast';
+import { locateJsonError } from '@/lib/jsonLocate';
 import { downloadTextFile, timestampSuffix } from '@/modules/toolbox/lib/download';
 import type { CommandProps } from '@/core/types';
 
@@ -111,9 +112,24 @@ function csvToJson(text: string): string {
   return JSON.stringify(objs, null, 2);
 }
 
+/** 从 `JSON.parse` 失败中定位行列（与 JsonFormatter 同款扫描器） */
+function describeJsonError(raw: string, message: string): string {
+  const spot = locateJsonError(raw);
+  if (spot === null) {
+    return message;
+  }
+  return `第 ${spot.line} 行第 ${spot.column} 列：${spot.reason}\n${spot.snippet}`;
+}
+
 /** JSON（对象数组）→ CSV 文本（表头为所有键的并集）。 */
 function jsonToCsv(text: string): string {
-  const data: unknown = JSON.parse(text);
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : 'JSON 解析失败';
+    throw new Error(describeJsonError(text, message));
+  }
   if (!Array.isArray(data)) {
     throw new Error('JSON 需为对象数组');
   }
@@ -199,6 +215,7 @@ export function CsvJson({ initialInput = '' }: CommandProps): React.JSX.Element 
       onBack={shell.onBack}
       favorite={shell.favorite}
       onToggleFavorite={shell.onToggleFavorite}
+      fill
       copyText={output}
       shortcutHint="切换上方标签选择转换方向；结果可复制或导出为文件"
       samples={
@@ -239,31 +256,46 @@ export function CsvJson({ initialInput = '' }: CommandProps): React.JSX.Element 
             ]
       }
     >
-      <Tabs value={tab} onValueChange={onTabChange}>
-        <TabsList>
+      <Tabs
+        value={tab}
+        onValueChange={onTabChange}
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <TabsList className="shrink-0">
           <TabsTrigger value="csv2json">CSV → JSON</TabsTrigger>
           <TabsTrigger value="json2csv">JSON → CSV</TabsTrigger>
         </TabsList>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="flex min-w-0 flex-col gap-2">
-            <label className="text-sm font-medium text-foreground">
+        {/* 撑满模式（与 JsonFormatter 同款布局）：长 CSV / 长 JSON 随窗口伸缩滚动 */}
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="flex min-h-0 min-w-0 flex-col gap-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="csvjson-input">
               {tab === 'csv2json' ? 'CSV 输入' : 'JSON 输入（对象数组）'}
             </label>
             <textarea
+              id="csvjson-input"
               rows={12}
-              className="w-full min-h-0 flex-1 rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              spellCheck={false}
+              className="w-full min-h-[200px] flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               value={input}
               placeholder={tab === 'csv2json' ? 'name,age\nToolbox,3' : '[{"name":"Toolbox","age":3}]'}
               onChange={(event) => setInput(event.target.value)}
             />
-            {error ? <p className="text-xs text-destructive">{error}</p> : null}
+            {error ? (
+              <div
+                role="alert"
+                className="scrollbar-thin max-h-[120px] overflow-auto whitespace-pre-wrap rounded-lg border border-destructive/40 bg-destructive/5 p-2.5 font-mono text-xs text-destructive"
+              >
+                {error}
+              </div>
+            ) : null}
           </div>
-          <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex min-h-0 min-w-0 flex-col gap-2">
             <ResultBox
               title="转换结果"
               value={output}
               emptyHint={error ? '转换失败' : '输入后自动转换'}
               mono
+              fill
             />
             {output ? (
               <Button variant="ghost" size="sm" className="self-start" onClick={handleDownload}>

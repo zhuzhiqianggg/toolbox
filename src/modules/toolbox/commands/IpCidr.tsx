@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Copy, Server as ServerIcon } from 'lucide-react';
 import { CommandShell, type SampleEntry } from '@/components/CommandShell';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { useCommandShell } from '@/hooks/useCommandShell';
 import { useToolState } from '@/hooks/useToolState';
 import { copyText } from '@/lib/clipboard';
@@ -210,6 +211,17 @@ export function IpCidr({ initialInput = '' }: CommandProps): React.JSX.Element {
     }
   };
 
+  /** 常用前缀快捷按钮：复用当前输入的 IP 部分，仅替换 /prefix */
+  const QUICK_PREFIXES: readonly number[] = [8, 16, 20, 24, 28, 30, 31, 32];
+  const applyQuickPrefix = (prefix: number): void => {
+    const parsedInput = parseCidr(state.input);
+    if ('error' in parsedInput) {
+      toast.warning('请先输入有效的 IPv4 / CIDR，再用快捷前缀');
+      return;
+    }
+    commit(`${intToIp(parsedInput.ip)}/${prefix}`);
+  };
+
   const parsed = React.useMemo(() => parseCidr(submitted), [submitted]);
   const report = React.useMemo(
     () => ('error' in parsed ? null : buildReport(parsed.ip, parsed.prefix)),
@@ -264,6 +276,7 @@ export function IpCidr({ initialInput = '' }: CommandProps): React.JSX.Element {
       onBack={shell.onBack}
       favorite={shell.favorite}
       onToggleFavorite={shell.onToggleFavorite}
+      onPaste={(text) => commit(text)}
       getCopyText={getCopyTextValue}
       shortcutHint="Enter 计算 · 裸 IP 按 /32 处理 · /31 /32 按 RFC 3021 不扣减 · Esc 返回"
       samples={samples}
@@ -291,6 +304,22 @@ export function IpCidr({ initialInput = '' }: CommandProps): React.JSX.Element {
             {parsed.error}
           </div>
         ) : null}
+
+        {/* 常用前缀快捷按钮：基于当前输入的 IP 部分切换掩码，免去手改 /prefix */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-muted-foreground">常用前缀</span>
+          {QUICK_PREFIXES.map((prefix) => (
+            <Button
+              key={prefix}
+              size="sm"
+              variant="secondary"
+              className="h-7 px-2.5 font-mono text-xs"
+              onClick={() => applyQuickPrefix(prefix)}
+            >
+              /{prefix}
+            </Button>
+          ))}
+        </div>
 
         {report !== null ? (
           <section className="rounded-xl border border-border bg-card p-4 shadow-card">

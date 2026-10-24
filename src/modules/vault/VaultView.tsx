@@ -475,7 +475,8 @@ function VaultItemRow(props: VaultItemRowProps): React.JSX.Element {
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
+      {/* focus-within：键盘 Tab 聚焦到操作按钮时保持可见，不依赖 hover */}
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
         <button
           type="button"
           title="复制到剪贴板（20 秒后自动清空）"
@@ -628,7 +629,7 @@ function SetupForm({ onDone }: AuthFormProps): React.JSX.Element {
           className="mb-3 h-9 w-full rounded-md border bg-transparent px-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-brand"
         />
         <p className="mb-3 rounded-md bg-amber-500/10 px-2.5 py-2 text-[11px] leading-relaxed text-amber-700">
-          ⚠ 主密码无法找回：遗忘后密码库内所有数据将无法解密，请务必牢记。
+          注意：主密码无法找回——遗忘后密码库内所有数据将无法解密，请务必牢记。
         </p>
         {error && (
           <p className="mb-2 rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5 text-[11px] text-destructive">

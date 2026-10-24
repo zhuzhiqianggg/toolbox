@@ -27,13 +27,17 @@ const CATEGORIES: Record<string, Category> = {
     label: '长度',
     temp: false,
     units: [
+      { id: 'nm', label: '纳米 nm', factor: 1e-9 },
+      { id: 'um', label: '微米 μm', factor: 1e-6 },
       { id: 'mm', label: '毫米 mm', factor: 0.001 },
       { id: 'cm', label: '厘米 cm', factor: 0.01 },
       { id: 'm', label: '米 m', factor: 1 },
       { id: 'km', label: '千米 km', factor: 1000 },
       { id: 'in', label: '英寸 in', factor: 0.0254 },
       { id: 'ft', label: '英尺 ft', factor: 0.3048 },
+      { id: 'yd', label: '码 yd', factor: 0.9144 },
       { id: 'mi', label: '英里 mi', factor: 1609.344 },
+      { id: 'nmi', label: '海里 nmi', factor: 1852 },
     ],
   },
   mass: {
@@ -42,6 +46,8 @@ const CATEGORIES: Record<string, Category> = {
     units: [
       { id: 'mg', label: '毫克 mg', factor: 0.001 },
       { id: 'g', label: '克 g', factor: 1 },
+      { id: 'liang', label: '两', factor: 50 },
+      { id: 'jin', label: '斤', factor: 500 },
       { id: 'kg', label: '千克 kg', factor: 1000 },
       { id: 't', label: '吨 t', factor: 1e6 },
       { id: 'oz', label: '盎司 oz', factor: 28.3495 },
@@ -57,6 +63,7 @@ const CATEGORIES: Record<string, Category> = {
       { id: 'MB', label: 'MB', factor: 1024 ** 2 },
       { id: 'GB', label: 'GB', factor: 1024 ** 3 },
       { id: 'TB', label: 'TB', factor: 1024 ** 4 },
+      { id: 'PB', label: 'PB', factor: 1024 ** 5 },
     ],
   },
   temp: {
@@ -85,6 +92,20 @@ function fromCelsius(c: number, unit: string): number {
 }
 
 /**
+ * 数值展示：整数原样；常规小数保留 6 位并去尾零；
+ * 过小的非零值退回科学计数法 —— 否则 1 纳米换千米会显示成「0」。
+ */
+function formatCount(v: number): string {
+  if (Number.isInteger(v)) {
+    return String(v);
+  }
+  if (v !== 0 && Math.abs(v) < 1e-6) {
+    return v.toExponential(3).replace(/\.?0+e/, 'e');
+  }
+  return v.toFixed(6).replace(/\.?0+$/, '');
+}
+
+/**
  * 单位换算：长度 / 重量 / 数据存储 / 温度，纯 TS 查找表（无依赖）。
  * 输入值实时换算到所有目标单位，可一键复制完整结果。
  */
@@ -109,11 +130,13 @@ export function UnitConverter({ initialInput = '' }: CommandProps): React.JSX.El
 
   const num = Number.parseFloat(value);
   const valid = Number.isFinite(num) && category !== undefined;
+  // 长度 / 重量 / 数据存储不接受负数（负的米数、负的 GB 无物理意义；温度可以为负）
+  const negativeBlocked = valid && category !== undefined && !category.temp && num < 0;
 
   const results = React.useMemo<Record<string, number>>(() => {
     const cat = CATEGORIES[categoryId];
     const out: Record<string, number> = {};
-    if (!cat || !valid) {
+    if (!cat || !valid || negativeBlocked) {
       return out;
     }
     if (cat.temp) {
@@ -128,15 +151,14 @@ export function UnitConverter({ initialInput = '' }: CommandProps): React.JSX.El
       out[unit.id] = base / unit.factor;
     }
     return out;
-  }, [categoryId, fromUnit, num, valid]);
+  }, [categoryId, fromUnit, num, valid, negativeBlocked]);
 
   const resultText = React.useMemo(
     () =>
       Object.entries(results)
         .map(([id, v]) => {
           const unit = CATEGORIES[categoryId]?.units.find((u) => u.id === id);
-          const display = Number.isInteger(v) ? String(v) : v.toFixed(6).replace(/\.?0+$/, '');
-          return `${display} ${unit?.label ?? id}`;
+          return `${formatCount(v)} ${unit?.label ?? id}`;
         })
         .join('\n'),
     [results, categoryId],
@@ -243,6 +265,12 @@ export function UnitConverter({ initialInput = '' }: CommandProps): React.JSX.El
             />
           </label>
         </div>
+
+        {negativeBlocked ? (
+          <p role="alert" className="text-xs text-destructive">
+            长度 / 重量 / 数据存储不支持负数（温度类除外），请输入非负数值
+          </p>
+        ) : null}
 
         <ResultBox
           title={`换算结果（${CATEGORIES[categoryId]?.label ?? ''}）`}

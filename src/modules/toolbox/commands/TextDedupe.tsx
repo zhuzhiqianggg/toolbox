@@ -23,7 +23,7 @@ const SAMPLE_LOG = [
 const SAMPLE_HOSTS = ['Node-A.Example.com', 'node-a.example.com', ' Node-B.example.com', 'NODE-B.EXAMPLE.COM', 'node-c.example.com'].join('\n');
 
 /**
- * 文本去重：按行去重，支持「去首尾空格」「忽略大小写」「结果排序」选项。
+ * 文本去重：按行去重，支持「去首尾空格」「忽略大小写」「去空行」「结果排序」选项。
  * 标题栏「一键复制」复制去重后全部行。
  */
 export function TextDedupe({ initialInput = '' }: CommandProps): React.JSX.Element {
@@ -31,15 +31,22 @@ export function TextDedupe({ initialInput = '' }: CommandProps): React.JSX.Eleme
   const [input, setInput] = usePersistedState<string>(COMMAND_ID, 'input', initialInput);
   const [trim, setTrim] = usePersistedState<boolean>(COMMAND_ID, 'trim', true);
   const [ignoreCase, setIgnoreCase] = usePersistedState<boolean>(COMMAND_ID, 'ignoreCase', false);
+  const [dropEmpty, setDropEmpty] = usePersistedState<boolean>(COMMAND_ID, 'dropEmpty', false);
   const [sort, setSort] = usePersistedState<boolean>(COMMAND_ID, 'sort', false);
 
-  const { output, removed } = React.useMemo(() => {
+  const { output, removed, emptyRemoved } = React.useMemo(() => {
     const raw = input.split(/\r?\n/);
     const processed = raw.map((line) => (trim ? line.trim() : line));
     const seen = new Set<string>();
     const out: string[] = [];
     let dup = 0;
+    let empties = 0;
     for (const line of processed) {
+      // 去空行：归一化后整行为空才算空（先 trim 再判断，与去重键口径一致）
+      if (dropEmpty && line.length === 0) {
+        empties += 1;
+        continue;
+      }
       const key = ignoreCase ? line.toLowerCase() : line;
       if (seen.has(key)) {
         dup += 1;
@@ -51,8 +58,8 @@ export function TextDedupe({ initialInput = '' }: CommandProps): React.JSX.Eleme
     if (sort) {
       out.sort((a, b) => a.localeCompare(b));
     }
-    return { output: out.join('\n'), removed: dup };
-  }, [input, trim, ignoreCase, sort]);
+    return { output: out.join('\n'), removed: dup, emptyRemoved: empties };
+  }, [input, trim, ignoreCase, dropEmpty, sort]);
 
   const lineCount = output.length > 0 ? output.split('\n').length : 0;
 
@@ -60,7 +67,7 @@ export function TextDedupe({ initialInput = '' }: CommandProps): React.JSX.Eleme
     <CommandShell
       title="文本去重"
       onPaste={(t) => setInput(t)}
-      description="按行去除重复，支持去空格 / 忽略大小写 / 排序"
+      description="按行去除重复，支持去空格 / 忽略大小写 / 去空行 / 排序"
       icon={<Filter className="h-4 w-4" />}
       onBack={shell.onBack}
       favorite={shell.favorite}
@@ -129,6 +136,10 @@ export function TextDedupe({ initialInput = '' }: CommandProps): React.JSX.Eleme
               忽略大小写
             </label>
             <label className="flex items-center gap-2 text-sm text-foreground">
+              <Switch checked={dropEmpty} onCheckedChange={setDropEmpty} />
+              去空行
+            </label>
+            <label className="flex items-center gap-2 text-sm text-foreground">
               <Switch checked={sort} onCheckedChange={setSort} />
               排序
             </label>
@@ -136,7 +147,8 @@ export function TextDedupe({ initialInput = '' }: CommandProps): React.JSX.Eleme
         </div>
         <div className="flex min-w-0 flex-col gap-2">
           <div className="text-sm text-muted-foreground">
-            结果（共 {lineCount} 行，去除 {removed} 行重复）
+            结果（共 {lineCount} 行，去除 {removed} 行重复
+            {emptyRemoved > 0 ? `、${emptyRemoved} 行空` : ''}）
           </div>
           <ResultBox title="去重后" value={output} emptyHint="输入文本后自动去重" mono />
         </div>

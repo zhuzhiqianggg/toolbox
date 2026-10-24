@@ -19,6 +19,8 @@ import {
   readFileAsBase64,
   readFileAsText,
   textToBytes,
+  toUrlSafe,
+  wrapLines,
   type Base64Options,
   type TextEncoding,
 } from '@/modules/toolbox/lib/base64Utils';
@@ -120,17 +122,13 @@ export function Base64Codec({ initialInput = '' }: CommandProps): React.JSX.Elem
 
   const result = React.useMemo<CodecResult>(() => {
     if (mode === 'encode' && fileSource) {
-      // 文件 → Base64：再套用 URL 安全 / 换行选项
+      // 文件 → Base64：再套用 URL 安全 / 换行选项（复用底层转换，避免两份实现）
       let value = fileSource.base64;
       if (urlSafe) {
-        value = value.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        value = toUrlSafe(value);
       }
       if (wrap) {
-        const lines: string[] = [];
-        for (let i = 0; i < value.length; i += 76) {
-          lines.push(value.slice(i, i + 76));
-        }
-        value = lines.join('\n');
+        value = wrapLines(value);
       }
       return { text: value, error: null, ok: true };
     }
@@ -280,7 +278,7 @@ export function Base64Codec({ initialInput = '' }: CommandProps): React.JSX.Elem
         onClick: execute,
         disabled: !auto && input.trim().length === 0 && !fileSource,
       }}
-      shortcutHint="粘贴即算 · 交换按钮翻转方向（Esc 返回）"
+      shortcutHint="粘贴即算 · 关闭自动处理时 Ctrl+Enter 执行 · Esc 返回"
       samples={[
         {
           label: '编码中文',
@@ -405,6 +403,13 @@ export function Base64Codec({ initialInput = '' }: CommandProps): React.JSX.Elem
               autoFocus
               value={input}
               onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                // Ctrl / Cmd + Enter：手动模式下触发主操作（自动模式输入即算，无需快捷键）
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !auto) {
+                  event.preventDefault();
+                  execute();
+                }
+              }}
               placeholder={
                 mode === 'encode' ? '输入要编码的文本（支持中文）' : '粘贴 Base64 字符串（自动忽略换行与空格）'
               }

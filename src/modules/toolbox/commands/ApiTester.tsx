@@ -311,7 +311,8 @@ export function ApiTester({ initialInput }: CommandProps): React.JSX.Element {
       shortcutHint="应用内由 Rust 直发请求（无 CORS 限制）· 浏览器预览走 fetch（受 CORS 限制）"
       samples={samples}
     >
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
+      {/* 滚动与内边距由 CommandShell 内容区统一提供，这里只负责纵向间距 */}
+      <div className="flex flex-col gap-3">
         {/* —— 请求行 —— */}
         <div className="flex flex-wrap items-center gap-2">
           <select
@@ -338,7 +339,7 @@ export function ApiTester({ initialInput }: CommandProps): React.JSX.Element {
               }
             }}
           />
-          {sending && !isTauri ? (
+          {sending && !isTauri() ? (
             <Button variant="outline" onClick={cancel}>
               <X className="h-4 w-4" /> 取消
             </Button>

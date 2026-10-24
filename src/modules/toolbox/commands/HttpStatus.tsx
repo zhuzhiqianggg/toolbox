@@ -263,7 +263,7 @@ export function HttpStatus(_props: CommandProps): React.JSX.Element {
                 onClick={() => void copyRow(entry)}
                 title={`点击复制「${entry.code} ${entry.name}」`}
                 aria-label={`复制 ${entry.code} ${entry.name}`}
-                className="grid w-full grid-cols-[64px_230px_1fr_16px] items-center gap-3 px-3 py-2 text-left transition last:rounded-b-xl hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
+                className="grid w-full grid-cols-[64px_1fr_16px] items-center gap-3 px-3 py-2 text-left transition last:rounded-b-xl hover:bg-accent focus-visible:bg-accent focus-visible:outline-none sm:grid-cols-[64px_230px_1fr_16px]"
               >
                 <span
                   className={cn(
@@ -274,7 +274,8 @@ export function HttpStatus(_props: CommandProps): React.JSX.Element {
                   {entry.code}
                 </span>
                 <span className="truncate text-sm font-medium text-foreground">{entry.name}</span>
-                <span className="truncate text-sm text-muted-foreground">{entry.summary}</span>
+                {/* 窄窗口隐藏说明列，避免固定列宽把行撑出横向滚动 */}
+                <span className="hidden truncate text-sm text-muted-foreground sm:block">{entry.summary}</span>
                 <Copy aria-hidden="true" className="h-3.5 w-3.5 text-muted-foreground/50" />
               </button>
             ))}
