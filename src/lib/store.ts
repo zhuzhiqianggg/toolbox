@@ -124,10 +124,14 @@ function withDefaults(stored: Partial<AppSettings> | undefined): AppSettings {
   // 这里把 'light' 迁移为 'system'（跟随系统），只有用户显式选过 'dark' 才保留。
   const storedTheme = stored?.theme;
   const theme = storedTheme === 'dark' || storedTheme === 'system' ? storedTheme : 'system';
+  // V61：旧默认呼出键 Alt+Space 视为「未自定义」，迁移到新默认 Alt+Q；
+  // 用户显式录制过的其他键不受影响（Rust 侧 register_from_settings 同口径）。
+  const storedHotkey = stored?.hotkey === 'Alt+Space' ? undefined : stored?.hotkey;
   return {
     ...DEFAULT_SETTINGS,
     ...(stored ?? {}),
     theme,
+    hotkey: storedHotkey ?? DEFAULT_SETTINGS.hotkey,
     modules: { ...DEFAULT_SETTINGS.modules, ...(stored?.modules ?? {}) },
     // V56：快捷入口的口径变过一次（默认里不再放任务管理器这类随处可得的入口）。
     // 已装机的 `settings.json` 里落盘的是**旧默认**，只改 DEFAULT_QUICK_ACTION_IDS

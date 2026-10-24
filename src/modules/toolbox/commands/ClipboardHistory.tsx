@@ -9,6 +9,8 @@ import type { CommandProps } from '@/core/types';
 
 const COMMAND_ID = 'clipboard-history';
 
+// tool-audit-ignore: samples —— 本工具是被动记录器（没有输入框），示例条无处可填
+
 const MAX_ENTRIES = 50;
 const MAX_ENTRY_CHARS = 5000;
 

@@ -26,7 +26,7 @@ export function fallbackPlatformInfo(): PlatformInfo {
       systemInfo: false,
       tray: 'tray',
     },
-    hotkeyDefault: 'Alt+Space',
+    hotkeyDefault: 'Alt+Q',
   };
 }
 

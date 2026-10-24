@@ -22,15 +22,20 @@ DialogOverlay.displayName = 'DialogOverlay';
 
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { resizable?: boolean }
+>(({ className, children, resizable = false, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4',
+        'fixed left-1/2 top-1/2 z-50 grid w-full -translate-x-1/2 -translate-y-1/2 gap-4',
         'rounded-xl border border-border bg-card p-6 shadow-popover animate-fade-in',
+        // resizable（V62）：右下角可拖拽调整大小（长表单 / 密码生成器等场景），
+        // 以视口留 1.5rem 边距封顶，避免拖出屏幕；最小尺寸防拖成一团
+        resizable
+          ? 'min-h-[220px] min-w-[320px] max-h-[calc(100vh-3rem)] max-w-[calc(100vw-3rem)] resize overflow-auto'
+          : 'max-w-lg',
         className,
       )}
       {...props}

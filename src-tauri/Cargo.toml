@@ -52,6 +52,8 @@ rand = "0.8"
 
 # 平台限定依赖：仅 Windows
 [target.'cfg(target_os = "windows")'.dependencies]
+# 注册表读写（V62 Windows 优化工具：读状态免提权，写 HKCU 免提权）
+winreg = "0.55"
 # Win32_UI_Shell_Common（V38 追加）：「系统」格（此电脑 / 回收站 / 用户的文件）
 # 取图标要走 SHParseDisplayName + ITEMIDLIST，后者被这道 feature 门锁着。
 windows = { version = "0.58", features = [

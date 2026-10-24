@@ -11,6 +11,7 @@ import type {
   VaultStatus,
 } from '@/types/vault';
 import type { SysAction } from '@/types/sys';
+import type { WinOptItem, WinOptTarget } from '@/types/winopt';
 // 仅类型引用（`import type` 编译期擦除，不引入运行期循环依赖）
 import type { Todo } from '@/core/data/todosService';
 
@@ -105,6 +106,16 @@ export const ipc = {
   /** 重注册全局快捷键（注册失败返回错误，前端不落盘并回滚显示） */
   hotkeyUpdate: (hotkey: string): Promise<void> =>
     call<void>('hotkey_update', { hotkey }),
+
+  /** Windows 优化：清单（元数据 + 实时状态） */
+  winoptList: (): Promise<WinOptItem[]> => call<WinOptItem[]>('winopt_list'),
+
+  /** Windows 优化：切换条目状态（`to`：applied = 优化值 / default = Windows 默认） */
+  winoptApply: (id: string, to: WinOptTarget): Promise<void> =>
+    call<void>('winopt_apply', { id, to }),
+
+  /** Windows 优化：单向动作（如卸载 OneDrive） */
+  winoptAction: (id: string): Promise<void> => call<void>('winopt_action', { id }),
   /** 导出备份（targetDir 由用户经 dialog 选择后传入） */
   backupExport: (targetDir: string): Promise<BackupReport> =>
     call<BackupReport>('backup_export', { targetDir }),

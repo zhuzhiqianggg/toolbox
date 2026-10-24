@@ -3,10 +3,13 @@
 //! 本批（V08）覆盖：主面板显隐/聚焦、close-to-tray、便签多实例窗（`note-{id}`）。
 //! 设置窗（V13）/ 桌面整理预览窗（V12）后续扩展。
 
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
 /// 主窗口 label（与 tauri.conf.json 中 app.windows[0].label 一致）
 pub const MAIN_LABEL: &str = "main";
+
+/// 主窗口「被唤出显示」事件（前端 `useHotkeyOpen` 监听：切回面板 + 聚焦搜索框）。
+pub const MAIN_SHOWN_EVENT: &str = "toolbox://main-shown";
 
 /// 取得主窗口句柄。
 fn main_window(app: &AppHandle) -> Result<WebviewWindow, String> {
@@ -42,6 +45,8 @@ pub fn show_main_palette(app: &AppHandle) -> Result<(), String> {
     // `center()` 以**当前窗口所在显示器**为基准居中，逻辑像素与 DPI 缩放都正确。
     win.center().map_err(|e| format!("主窗口居中失败：{e}"))?;
     win.set_focus().map_err(|e| format!("聚焦主窗口失败：{e}"))?;
+    // 仅在真正「唤出显示」时广播（隐藏路径不发）——前端据此决定切回搜索面板还是留在工具页
+    let _ = app.emit(MAIN_SHOWN_EVENT, ());
     Ok(())
 }
 

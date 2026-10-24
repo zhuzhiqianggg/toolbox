@@ -54,12 +54,13 @@ function check(condition, message, detail) {
 /** 读取 lucide 图标登记表里已登记的名字。 */
 function readRegisteredIcons() {
   const src = readFileSync(ICONS_FILE, 'utf8');
-  const block = src.match(/export const ICONS: Record<string, LucideIcon> = \{([\s\S]*?)\n\};/);
+  // `\r?\n`：Windows 检出（core.autocrlf=true）下 working copy 是 CRLF，纯 `\n` 会整表读空
+  const block = src.match(/export const ICONS: Record<string, LucideIcon> = \{([\s\S]*?)\r?\n\};/);
   if (!block) return new Set();
   return new Set(
     block[1]
-      .split('\n')
-      .map((line) => line.match(/^\s*([A-Za-z0-9_]+),$/))
+      .split(/\r?\n/)
+      .map((line) => line.match(/^\s*([A-Za-z0-9_]+),\s*$/))
       .filter(Boolean)
       .map((match) => match[1]),
   );
@@ -78,7 +79,7 @@ function readCategoryUnion() {
 /** 读取分类元数据表的 id 与顺序。 */
 function readCategoryMetas() {
   const src = readFileSync(CATEGORIES_FILE, 'utf8');
-  return [...src.matchAll(/\{\s*\n\s*id: '([a-z]+)',\n\s*name: '([^']*)',/g)].map((match) => ({
+  return [...src.matchAll(/\{\s*\r?\n\s*id: '([a-z]+)',\r?\n\s*name: '([^']*)',/g)].map((match) => ({
     id: match[1],
     name: match[2],
   }));
@@ -92,7 +93,7 @@ function readCategoryMetas() {
 function readCommands() {
   const src = readFileSync(COMMANDS_FILE, 'utf8');
   const pattern =
-    /\{\n\s*id: '([^']+)',([\s\S]*?)load: \(\) => import\('\.\/([^']+)'\),\n\s*\},/g;
+    /\{\r?\n\s*id: '([^']+)',([\s\S]*?)load: \(\) => import\('\.\/([^']+)'\),\r?\n\s*\},/g;
   const out = [];
   for (const match of src.matchAll(pattern)) {
     const body = match[2];

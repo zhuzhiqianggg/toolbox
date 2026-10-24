@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Palette as PaletteIcon } from 'lucide-react';
-import { CommandShell } from '@/components/CommandShell';
+import { CommandShell, type SampleEntry } from '@/components/CommandShell';
 import { CopyButton } from '@/components/CopyButton';
 import { useCommandShell } from '@/hooks/useCommandShell';
 import { usePersistedState } from '@/hooks/usePersistedState';
@@ -158,6 +158,18 @@ export function ColorConverter({ initialInput = '' }: CommandProps): React.JSX.E
 
   const valid = parseHex(hex) !== null;
 
+  /** 示例条（V62）：一键填入代表性颜色，apply 只调 onHex，另两栏自动同步 */
+  const samples = React.useMemo<SampleEntry[]>(
+    () => [
+      { label: '品牌蓝', description: '#3B82F6', apply: () => onHex('#3B82F6') },
+      { label: '翡翠绿', description: '#10B981', apply: () => onHex('#10B981') },
+      { label: '琥珀橙', description: '#F59E0B', apply: () => onHex('#F59E0B') },
+      { label: '深夜蓝', description: '#0F172A（Tailwind slate-900）', apply: () => onHex('#0F172A') },
+    ],
+    // onHex 只写状态不读状态，闭包可安全缓存
+    [],
+  );
+
   return (
     <CommandShell
       title="颜色转换"
@@ -168,6 +180,7 @@ export function ColorConverter({ initialInput = '' }: CommandProps): React.JSX.E
       favorite={shell.favorite}
       onToggleFavorite={shell.onToggleFavorite}
       copyText={valid ? hex : ''}
+      samples={samples}
       shortcutHint="任意一栏输入即同步另两栏；复制按钮可单独取各格式"
     >
       <div className="flex flex-col gap-4">

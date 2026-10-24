@@ -796,7 +796,7 @@ function VaultItemDialog(props: VaultItemDialogProps): React.JSX.Element {
 
   return (
     <Dialog open={state.open} onOpenChange={(open: boolean) => (open ? undefined : close())}>
-      <DialogContent className="max-w-md">
+      <DialogContent resizable className="w-[28rem]">
         <DialogHeader>
           <DialogTitle>{state.editing ? '编辑条目' : '新增条目'}</DialogTitle>
           <DialogDescription>

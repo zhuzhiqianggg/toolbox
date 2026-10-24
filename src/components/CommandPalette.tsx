@@ -108,10 +108,12 @@ function greetingOf(hour: number): string {
  *
  * - 键盘交互：↑↓ 选择、Enter 打开、Esc（有输入→清空；无输入→隐藏主面板/常驻托盘）；
  * - 首屏：收藏 + 最近使用 + 模块 + 系统命令（`Esc` 空输入时经 Rust 隐藏，浏览器降级为无操作）；
- * - 搜索：`registry.searchCommands`（拼音首字母 + fuse 模糊）。
+ * - 搜索：`registry.searchCommands`（拼音首字母 + fuse 模糊）；
+ * - V61：全局呼出键展示读设置（Alt+Q）；呼出事件由 `useHotkeyOpen` 驱动焦点入搜索框。
  */
 export function CommandPalette(): React.JSX.Element {
   const [query, setQuery] = React.useState('');
+  const hotkey = useAppStore((state) => state.settings.hotkey);
 
   // 订阅相关切片以保证启停/收藏/最近变化时重渲染
   const modulesState = useAppStore((state) => state.settings.modules);
@@ -199,7 +201,7 @@ export function CommandPalette(): React.JSX.Element {
             </p>
           </div>
           <kbd className="hidden shrink-0 items-center rounded-md border border-border bg-background/70 px-2 py-1 text-[10px] font-medium text-muted-foreground shadow-card sm:block">
-            Alt + Space
+            {hotkey.replace(/\+/g, ' + ')}
           </kbd>
         </div>
 

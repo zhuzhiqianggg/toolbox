@@ -10,3 +10,4 @@ pub mod notes;
 pub mod sys;
 pub mod todos;
 pub mod vault;
+pub mod winopt;

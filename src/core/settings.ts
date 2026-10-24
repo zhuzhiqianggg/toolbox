@@ -119,7 +119,8 @@ export function resolveQuickActionIds(
 
 /** 默认应用设置（首次运行时以此为基线） */
 export const DEFAULT_SETTINGS: AppSettings = {
-  hotkey: 'Alt+Space',
+  // V61：默认呼出键改为 Alt+Q（旧默认 Alt+Space 由 lib/store.ts 迁移、Rust 侧同步兼容）
+  hotkey: 'Alt+Q',
   theme: 'system',
   autoLaunch: false,
   autoUpdate: true,

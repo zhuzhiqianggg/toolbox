@@ -17,7 +17,7 @@ const UNKNOWN_CAPABILITIES: PlatformCapabilities = {
 
 let currentPlatform: Platform = 'unknown';
 let currentCapabilities: PlatformCapabilities = UNKNOWN_CAPABILITIES;
-let currentHotkey = 'Alt+Space';
+let currentHotkey = 'Alt+Q';
 let injected = false;
 let inflight: Promise<void> | null = null;
 

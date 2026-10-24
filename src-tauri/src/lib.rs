@@ -105,6 +105,10 @@ pub fn run() {
             // —— 系统快捷动作（白名单制）——
             commands::sys::sys_action_list,
             commands::sys::sys_action_run,
+            // —— Windows 优化（白名单制）——
+            commands::winopt::winopt_list,
+            commands::winopt::winopt_apply,
+            commands::winopt::winopt_action,
             // —— 备份 / 恢复 ——
             commands::backup::backup_export,
             commands::backup::backup_import,

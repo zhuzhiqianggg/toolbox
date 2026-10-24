@@ -30,6 +30,14 @@ export interface ToolCategoryMeta {
 
 export const TOOL_CATEGORIES: readonly ToolCategoryMeta[] = [
   {
+    id: 'system',
+    name: '系统管理',
+    hint: 'Windows 优化、系统项开关',
+    icon: 'Settings',
+    chip: 'bg-gradient-to-br from-slate-500/15 to-slate-500/5 text-slate-600 ring-1 ring-inset ring-slate-500/20 dark:from-slate-400/20 dark:to-slate-400/5 dark:text-slate-300 dark:ring-slate-400/25',
+    order: 9,
+  },
+  {
     id: 'text',
     name: '文本处理',
     hint: '清洗、对比、去重、命名转换',

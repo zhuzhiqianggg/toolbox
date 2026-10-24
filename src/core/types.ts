@@ -140,7 +140,8 @@ export type ToolCategory = 'text'
   | 'generate'
   | 'dev'
   | 'security'
-  | 'utility';
+  | 'utility'
+  | 'system';
 
 export interface CommandMeta {
   /** 命令 id（kebab-case，全局唯一），如 'timestamp' */

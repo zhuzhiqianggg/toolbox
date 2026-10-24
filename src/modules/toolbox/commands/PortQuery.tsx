@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { Network as NetworkIcon, RefreshCw, Copy } from 'lucide-react';
-import { CommandShell } from '@/components/CommandShell';
+import { CommandShell, type SampleEntry } from '@/components/CommandShell';
 import { Button } from '@/components/ui/button';
 import { useCommandShell } from '@/hooks/useCommandShell';
+import { useToolState } from '@/hooks/useToolState';
 import { ipc, type PortEntry } from '@/lib/ipc';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import type { CommandProps } from '@/core/types';
@@ -19,7 +20,20 @@ export function PortQuery({ initialInput = '' }: CommandProps): React.JSX.Elemen
   const [entries, setEntries] = React.useState<PortEntry[]>([]);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string>('');
-  const [filter, setFilter] = React.useState<string>(initialInput);
+  // 过滤词持久化（V62）：切走再回来不丢；用剪贴板建议 / 历史打开时以 initialInput 起始
+  const [state, patch] = useToolState(COMMAND_ID, { filter: initialInput });
+  const filter = state.filter;
+  const setFilter = React.useCallback((value: string): void => patch({ filter: value }), [patch]);
+
+  /** 示例条（V62）：常用过滤场景一键填入 */
+  const samples = React.useMemo<SampleEntry[]>(
+    () => [
+      { label: '80 端口', apply: () => setFilter('80') },
+      { label: 'chrome 进程', apply: () => setFilter('chrome') },
+      { label: 'LISTEN 态', apply: () => setFilter('LISTEN') },
+    ],
+    [setFilter],
+  );
 
   const load = React.useCallback(async (): Promise<void> => {
     setLoading(true);
@@ -64,6 +78,7 @@ export function PortQuery({ initialInput = '' }: CommandProps): React.JSX.Elemen
       onBack={shell.onBack}
       favorite={shell.favorite}
       onToggleFavorite={shell.onToggleFavorite}
+      samples={samples}
       copyText={filtered.map((e) => `${e.localPort}\t${e.state}\t${e.pid}\t${e.processName}`).join('\n')}
       shortcutHint="按端口号 / 进程名 / PID 过滤；复制按钮生成 taskkill 命令（不直接结束进程）"
     >

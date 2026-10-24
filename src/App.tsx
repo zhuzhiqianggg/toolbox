@@ -8,6 +8,7 @@ import { useAppStore, type MainView } from '@/stores/useAppStore';
 import { NoteWindow } from '@/modules/notes/NoteWindow';
 import { ReminderScheduler } from '@/modules/todos/ReminderScheduler';
 import { useTheme } from '@/hooks/useTheme';
+import { useHotkeyOpen } from '@/hooks/useHotkeyOpen';
 import { applyViewSize, initWindowShell } from '@/lib/windowShell';
 
 /** 可挂载的窗口根类型（与 Rust 侧 WindowKind 对应） */
@@ -51,10 +52,12 @@ const App: FC<AppProps> = ({ windowRoot = 'main', noteId }) => {
   // 应用主题（light / dark / system）
   useTheme();
 
-  // 全局快捷键呼出（V28）：**不再切回命令面板**。Rust 侧 toggle 后 set_focus 聚焦窗口，
-  // 视图原样保留 —— 用户在密码生成器上收起、再唤醒时仍在密码生成器（工具内输入由
-  // usePersistedState 落盘，一样都在）。只有用户在工具内按 Esc / 返回（CommandShell）
-  // 才回到面板。此前这里调用 showPalette()，是「唤醒后密码框没了」的根因。
+  // 全局快捷键呼出（V61，用户口径）：**有打开的工具/模块页 → 原样保留**（Rust 侧已
+  // show + set_focus，工具内输入由 usePersistedState 落盘，收起再唤醒一样都在）；
+  // **面板/设置页 → 切回命令面板并聚焦搜索框**（useHotkeyOpen 监听 main-shown 事件），
+  // 用户直接输入即可过滤工具。只有用户在工具内按 Esc / 返回（CommandShell）才回到面板。
+
+  useHotkeyOpen();
 
   const view = useAppStore((state) => state.view);
 
