@@ -566,6 +566,7 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
     // 以视口为参照滑到屏幕左侧外面去（整块看不见）。
     // dock 模式：不拉伸高度（块级嵌在日历下方），其余结构一致。
     <aside
+      data-tauri-drag-region={dock || undefined}
       className={cn(
         'relative flex shrink-0 flex-col items-center gap-1.5 rounded-2xl border',
         // dock 模式与两块面板同一套玻璃语言（V82）：半透明 + 去阴影

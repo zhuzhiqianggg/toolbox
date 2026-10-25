@@ -41,23 +41,9 @@ function dockNavigate(target: string): void {
     .catch(() => undefined);
 }
 
-/** 时钟 HH:mm:ss（两位补零） */
-function clockOf(ms: number): { hhmm: string; ss: string } {
-  const d = new Date(ms);
-  const pad = (n: number): string => String(n).padStart(2, '0');
-  return { hhmm: `${pad(d.getHours())}:${pad(d.getMinutes())}`, ss: pad(d.getSeconds()) };
-}
+/** 时钟（V83 已删）：Windows 任务栏本来就有时间，停靠窗顶栏不再重复 */
 
 export function WorkstationDockView(): React.JSX.Element {
-  // —— 时钟（每秒刷新，与系统时间同步）——
-  const [now, setNow] = useState<number>(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const clock = useMemo(() => clockOf(now), [now]);
-
   // —— 双列布局判定（V78）：宽 ≥660 左计划 / 右日历，窄窗回落单列 ——
   // V77 及以前阈值是 560，而右列固定 332 —— 620~700 宽时左列只剩 200 出头，
   // 待办标题被挤成一列字、日历格子也缩水，用户直说「布局很烂」。阈值抬到 660，
@@ -154,41 +140,12 @@ export function WorkstationDockView(): React.JSX.Element {
     // Mica 材质上轻铺一层半透明底（不遮死壁纸染色），去阴影去描边 = 「长在桌面上」
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background/25">
       {/*
-        V76：去掉「工作台」标题栏与关闭按钮（用户明确：本来就只有一个工作台，
-        这个标题不提供任何信息，却实打实吃掉 36px 高度）。拖动改为时钟区兜底：
-        整块带 data-tauri-drag-region，时钟文字块也带一份，按住即可拖窗。
-
-        V77：时钟与日期「看着乱」→ 收敛成左右两组：
-        左 = HH:mm 大号 + 秒（同基线、无底色徽标，不再像一枚贴纸）；
-        右 = 完整日期 + 农历，右对齐单行/两行，字号压到 12/10。
+        * V83：顶栏整块删掉（V76 的标题栏、V77 的时钟都去掉了）—— Windows 任务栏
+        * 本来就有时间日期，这里再放一遍纯属重复，还吃掉 40px 高度。
+        * 拖拽改由三处承担：顶部 8px 细条（全宽随手可抓）+ 两块面板的头部空白 +
+        * 快捷磁贴的边角空白；点按钮不受影响（drag-region 只认带属性的元素本身）。
       */}
-      <div
-        data-tauri-drag-region
-        className="relative flex shrink-0 select-none items-center justify-between gap-3 px-3 pb-2 pt-3"
-      >
-        <div data-tauri-drag-region className="flex items-baseline">
-          {/* V81：秒不再缩小一号 —— 与 HH:mm 同字号、以浅色区分（用户口径：
-              「设成一样大小，然后用不同的颜色来表示」，读起来才是一个完整的时刻） */}
-          <span
-            data-tauri-drag-region
-            className="tabular-nums text-[27px] font-semibold leading-none tracking-tight text-foreground"
-          >
-            {clock.hhmm}
-          </span>
-          <span
-            data-tauri-drag-region
-            className="tabular-nums text-[27px] font-semibold leading-none tracking-tight text-muted-foreground/45"
-          >
-            :{clock.ss}
-          </span>
-        </div>
-        {/*
-          * V82：顶栏右侧的「日期 + 农历」整块删掉 —— 用户口径：Windows 任务栏
-          * 本来就有时间日期，这里再放一遍纯属重复；而且选中日详情里已经给出
-          * 更完整的阳历 / 农历 / 干支。顶栏只留时钟当视觉锚点，腾出的高度给面板。
-          */}
-        <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-brand/25 to-transparent" />
-      </div>
+      <div data-tauri-drag-region className="h-2 shrink-0" />
 
       {/* 内容区（V81 等宽双列）：左计划 / 右日历各占一半 —— V78 之前右列固定 320px，
           左右差着 200 多像素，用户直评「整体怪怪的、日历框和待办框等宽更好看」。
@@ -205,6 +162,7 @@ export function WorkstationDockView(): React.JSX.Element {
               onHideDoneChange={setHideDone}
               focusToken={focusToken}
               glass
+              headerDraggable
             />
           </div>
           <div className="flex min-h-0 flex-1 flex-col gap-2">
@@ -216,6 +174,7 @@ export function WorkstationDockView(): React.JSX.Element {
                 pendingByDay={pendingByDay}
                 anniversariesEditable={false}
                 glass
+                headerDraggable
               />
             </div>
             <QuickActionsRail variant="dock" onNavigate={dockNavigate} />
@@ -234,6 +193,7 @@ export function WorkstationDockView(): React.JSX.Element {
               onHideDoneChange={setHideDone}
               focusToken={focusToken}
               glass
+              headerDraggable
             />
           </div>
           <div className="flex shrink-0 flex-col gap-2">

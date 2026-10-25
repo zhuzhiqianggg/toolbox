@@ -69,6 +69,8 @@ export interface CalendarPanelProps {
    * 主界面保持实色卡片，避免内容叠在壁纸上看不清。
    */
   glass?: boolean;
+  /** 头部空白作为拖拽区（V83）：停靠窗顶栏已删，面板头部开放给窗口拖动 */
+  headerDraggable?: boolean;
 }
 
 /** 星期表头（周一开始，与 startOfWeek 一致） */
@@ -80,6 +82,7 @@ export function CalendarPanel({
   pendingByDay,
   anniversariesEditable = true,
   glass = false,
+  headerDraggable = false,
 }: CalendarPanelProps): React.JSX.Element {
   const editable = anniversariesEditable;
   const anchorDate = useMemo(() => new Date(anchorMs), [anchorMs]);
@@ -246,12 +249,18 @@ export function CalendarPanel({
     >
       {/* V81 区块化：头部 / 网格 / 纪念日各自成「方块」（浅底或细边框圆角块），
           面板不再是一锅平铺的散件 —— 用户口径「每个部分设成方块」 */}
-      <header className="shrink-0 rounded-lg bg-muted/40 px-2.5 py-2">
+      <header
+        data-tauri-drag-region={headerDraggable || undefined}
+        className="shrink-0 rounded-lg bg-muted/40 px-2.5 py-2"
+      >
         <div className="flex items-center gap-2">
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-card text-brand ring-1 ring-inset ring-brand/20">
             <CalendarDays className="h-3.5 w-3.5" />
           </span>
-          <h3 className="whitespace-nowrap text-[13px] font-semibold tabular-nums text-foreground">
+          <h3
+            data-tauri-drag-region={headerDraggable || undefined}
+            className="whitespace-nowrap text-[13px] font-semibold tabular-nums text-foreground"
+          >
             {view.year} 年 {view.month + 1} 月
           </h3>
           <div className="ml-auto flex items-center gap-0.5">
@@ -556,8 +565,6 @@ export function CalendarPanel({
 
         {showAnniversaries ? (
           <div className="space-y-2 border-t border-border/70 p-2.5">
-            {editable ? (
-              <>
             {/* 两者区别直接写在表单上，避免用户猜 */}
             <p className="text-[10px] leading-relaxed text-muted-foreground/75">
               生日 = 按人记录，支持农历，每年自动换算到公历；纪念日 = 按事件记录，可每年或仅一次。
@@ -672,19 +679,10 @@ export function CalendarPanel({
                 添加
               </Button>
             </div>
-              </>
-            ) : (
-              /* V81：停靠窗只读 —— 不出表单，指回主界面 */
-              <p className="text-[10px] leading-relaxed text-muted-foreground/70">
-                在主界面「工作台」的日历面板里添加或删除；这里仅展示。
-              </p>
-            )}
 
             {anniversaries.length === 0 ? (
               <p className="text-[10px] leading-relaxed text-muted-foreground/70">
-                {editable
-                  ? '公历日期留空 = 用日历上选中的那天；农历请完整填写年月日（如 1988-10-13）。'
-                  : '还没有记录，去主界面「工作台」添加一条吧。'}
+                公历日期留空 = 用日历上选中的那天；农历请完整填写年月日（如 1988-10-13）。
               </p>
             ) : (
               <ul className="space-y-1.5">
@@ -731,16 +729,14 @@ export function CalendarPanel({
                           {solarText !== '' ? ` · 今年公历 ${solarText}` : ''}
                         </p>
                       </div>
-                      {editable ? (
-                        <button
-                          type="button"
-                          onClick={() => removeAnniversary(item.id)}
-                          title="删除"
-                          className="rounded p-0.5 text-muted-foreground/60 opacity-0 transition group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => removeAnniversary(item.id)}
+                        title="删除"
+                        className="rounded p-0.5 text-muted-foreground/60 opacity-0 transition group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     </li>
                   );
                 })}

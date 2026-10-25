@@ -51,6 +51,11 @@ export interface PlanPanelProps {
    * 让 Mica 壁纸染色透上来，看起来「长在桌面上」而不是一块悬浮白板。
    */
   glass?: boolean;
+  /**
+   * 头部空白可作为拖拽区（V83）：停靠窗顶栏（时钟）已删，无边框窗要能拖，
+   * 就把面板头部的空白（标题、间隙）开放成 drag-region；点按钮不受影响。
+   */
+  headerDraggable?: boolean;
 }
 
 /** 范围 chip 顺序（`day` 的文案在渲染时按选中日期动态显示） */
@@ -65,6 +70,7 @@ export function PlanPanel({
   onHideDoneChange,
   focusToken,
   glass = false,
+  headerDraggable = false,
 }: PlanPanelProps): React.JSX.Element {
   const [draft, setDraft] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -188,12 +194,18 @@ export function PlanPanel({
           : 'border-border bg-card shadow-panel',
       )}
     >
-      <header className="flex shrink-0 items-center gap-2">
+      <header
+        data-tauri-drag-region={headerDraggable || undefined}
+        className="flex shrink-0 items-center gap-2"
+      >
         {/* 与日历面板同一套「柔色底 + 同色字」图标块语言，两块面板并排才不打架 */}
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-400">
           <ListTodo className="h-3.5 w-3.5" />
         </span>
-        <h3 className="shrink-0 text-[13px] font-semibold text-foreground">
+        <h3
+          data-tauri-drag-region={headerDraggable || undefined}
+          className="shrink-0 text-[13px] font-semibold text-foreground"
+        >
           计划 · {relativeDayLabel(anchorMs)}
         </h3>
         {/* V80：原来是一枚「未完成 N · 共 M」胶囊，和标题、按钮挤在一行读起来很乱；
@@ -394,30 +406,38 @@ function TodoRow({
         <button
           type="button"
           aria-label={todo.done ? '标记未完成' : '标记完成'}
+          title={todo.done ? '标记未完成' : '标记完成'}
           onClick={(event) => {
             // 只勾完成，不触发展开
             event.stopPropagation();
             onToggleDone();
           }}
           className={cn(
-            'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition',
+            // V83：18px 大圆圈 → 16px 小方勾 —— 圆圈视觉上像单选框、还抢正文重心；
+            // 方勾是清单的通行语义，描边细一档也更轻。悬停提前显出半透明勾，
+            // 提示「点这里就完成」，不需要先猜哪个是开关。
+            'flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border transition',
             todo.done
               ? 'border-emerald-500 bg-emerald-500'
-              : 'border-muted-foreground/50 hover:border-emerald-600',
+              : 'border-muted-foreground/35 group-hover:border-emerald-500/70',
           )}
         >
-          {todo.done ? (
-            <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 text-white">
-              <path
-                d="M2 6.2L4.6 8.8L10 3.4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          ) : null}
+          <svg
+            viewBox="0 0 12 12"
+            className={cn(
+              'h-2.5 w-2.5 transition',
+              todo.done ? 'text-white' : 'text-emerald-500 opacity-0 group-hover:opacity-60',
+            )}
+          >
+            <path
+              d="M2 6.2L4.6 8.8L10 3.4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
 
         {/*
