@@ -363,6 +363,10 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
    */
   const listRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
+    // dock 模式改用 flex-wrap 平铺（宽度足够一行放下 6 个），不需要按高度分列
+    if (dock) {
+      return undefined;
+    }
     const node = listRef.current;
     if (node === null) {
       return undefined;
@@ -379,7 +383,7 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
     const observer = new ResizeObserver(compute);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [loading, pinned.length]);
+  }, [dock, loading, pinned.length]);
 
   const toggle = (id: string): void => {
     const next = selectedIds.includes(id)
@@ -421,18 +425,22 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
 
   /** 待排布的按钮节点（应用内跳转在前，系统动作在后，顺序即用户的自定义顺序） */
   const items = useMemo<React.JSX.Element[]>(() => {
-    const nodes: React.JSX.Element[] = APP_SHORTCUTS.map((item) => (
-      <RailButton
-        key={`app-${item.target}`}
-        icon={item.icon}
-        name={item.name}
-        description={item.description}
-        active={isTargetActive(item.target)}
-        onClick={() => navigate(item.target)}
-        onTip={setTip}
-        onTipEnd={() => setTip(null)}
-      />
-    ));
+    // dock 模式只放 Windows 功能快速入口（V73 用户点名「不是工具快捷」）——
+    // 应用内跳转在停靠窗没有意义（跨窗直达由主窗与停靠窗自身承担）
+    const nodes: React.JSX.Element[] = dock
+      ? []
+      : APP_SHORTCUTS.map((item) => (
+          <RailButton
+            key={`app-${item.target}`}
+            icon={item.icon}
+            name={item.name}
+            description={item.description}
+            active={isTargetActive(item.target)}
+            onClick={() => navigate(item.target)}
+            onTip={setTip}
+            onTipEnd={() => setTip(null)}
+          />
+        ));
 
     if (loading) {
       nodes.push(
@@ -488,7 +496,7 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
     return nodes;
     // isModuleActive 依赖 view，run/toggle 每次渲染重建；这里只关心列表内容变化
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pinned, loading, runningId, notice, view, load]);
+  }, [dock, pinned, loading, runningId, notice, view, load]);
 
   /** 列优先切块：读的时候从上往下，读完一列再读下一列 */
   const columns = useMemo<React.JSX.Element[][]>(() => {
@@ -512,42 +520,49 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
         dock ? 'w-full py-2' : 'h-full self-stretch py-3',
       )}
     >
-      {/* —— 图标区：自适应分列 + 溢出滚动 —— */}
-      <div
-        ref={listRef}
-        className={cn(
-          'flex min-h-0 items-start gap-1.5 px-1.5',
-          dock ? 'scrollbar-thin max-h-[160px] overflow-y-auto' : 'flex-1 overflow-y-auto',
-          overflow ? 'scrollbar-thin' : 'overflow-x-hidden',
-        )}
-      >
-        {columns.slice(0, overflow ? RAIL_MAX_COLS : columns.length).map((column, index) => (
-          <div key={index} className="flex flex-col gap-1.5">
-            {column}
-          </div>
-        ))}
-        {overflow ? (
-          <div className="flex flex-col gap-1.5">
-            <button
-              type="button"
-              onClick={() => setCustomizing(true)}
-              title={`还有 ${items.length - RAIL_MAX_COLS * perCol} 个快捷入口没显示，点这里精简或调整`}
-              onMouseEnter={(event) =>
-                setTip({
-                  name: '还有更多快捷入口',
-                  description: `栏内放不下全部 ${items.length} 个，点这里打开自定义面板精简；也可以把窗口拉高。`,
-                  elevated: false,
-                  rect: event.currentTarget.getBoundingClientRect(),
-                })
-              }
-              onMouseLeave={() => setTip(null)}
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-dashed border-border text-[10px] text-muted-foreground transition hover:border-brand/40 hover:text-brand"
-            >
-              +{items.length - RAIL_MAX_COLS * perCol}
-            </button>
-          </div>
-        ) : null}
-      </div>
+      {/* —— 图标区：主窗=按高度自适应分列 + 溢出滚动；dock=flex-wrap 平铺（最多
+          两行高，更多滚动兜底），全部 Windows 功能快速入口直接可见 —— */}
+      {dock ? (
+        <div className="scrollbar-thin flex max-h-[104px] flex-wrap items-start justify-center gap-1.5 overflow-y-auto px-1.5 py-1">
+          {items}
+        </div>
+      ) : (
+        <div
+          ref={listRef}
+          className={cn(
+            'flex min-h-0 items-start gap-1.5 px-1.5',
+            'flex-1 overflow-y-auto',
+            overflow ? 'scrollbar-thin' : 'overflow-x-hidden',
+          )}
+        >
+          {columns.slice(0, overflow ? RAIL_MAX_COLS : columns.length).map((column, index) => (
+            <div key={index} className="flex flex-col gap-1.5">
+              {column}
+            </div>
+          ))}
+          {overflow ? (
+            <div className="flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => setCustomizing(true)}
+                title={`还有 ${items.length - RAIL_MAX_COLS * perCol} 个快捷入口没显示，点这里精简或调整`}
+                onMouseEnter={(event) =>
+                  setTip({
+                    name: '还有更多快捷入口',
+                    description: `栏内放不下全部 ${items.length} 个，点这里打开自定义面板精简；也可以把窗口拉高。`,
+                    elevated: false,
+                    rect: event.currentTarget.getBoundingClientRect(),
+                  })
+                }
+                onMouseLeave={() => setTip(null)}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-dashed border-border text-[10px] text-muted-foreground transition hover:border-brand/40 hover:text-brand"
+              >
+                +{items.length - RAIL_MAX_COLS * perCol}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* dock 模式无底部常驻区，分隔线一并省略 */}
       {!dock && <span className="h-px w-8 shrink-0 bg-border" />}

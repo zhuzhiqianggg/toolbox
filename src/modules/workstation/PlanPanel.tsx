@@ -245,7 +245,7 @@ export function PlanPanel({
       </div>
 
       {/* 列表 */}
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pr-0.5">
+      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-0.5">
         {visible.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border py-10 text-center">
             <ListTodo className="h-6 w-6 text-muted-foreground/40" />
@@ -305,10 +305,14 @@ function TodoRow({
   return (
     <div
       className={cn(
+        // V73 统一行卡片：未完成=浅卡可点，已完成=灰底弱化，展开=品牌色聚焦，
+        // 三态同一套圆角/边框/内边距，与日历面板的格子视觉对齐
         'rounded-lg border transition',
         expanded
-          ? 'border-brand/40 bg-brand-muted/25'
-          : 'border-transparent hover:border-border hover:bg-accent/40',
+          ? 'border-brand/40 bg-brand-muted/20'
+          : todo.done
+            ? 'border-transparent bg-muted/40'
+            : 'border-border/60 bg-background/50 hover:border-brand/30 hover:bg-accent/40',
       )}
     >
       {/* 摘要行：点任意位置都能展开（用户反馈「必须点前面圆圈才行」） */}
@@ -322,7 +326,7 @@ function TodoRow({
             onToggleExpand();
           }
         }}
-        className="group flex cursor-pointer items-center gap-2.5 px-2 py-1.5"
+        className="group flex cursor-pointer items-center gap-2.5 px-2.5 py-2"
       >
         <button
           type="button"
@@ -364,7 +368,14 @@ function TodoRow({
             )}
           />
           {!expanded && summary !== '' && (
-            <p className="mt-0.5 truncate text-[11px] text-muted-foreground/80">{summary}</p>
+            <p
+              className={cn(
+                'mt-0.5 truncate text-[11px] text-muted-foreground/80',
+                todo.done && 'opacity-60',
+              )}
+            >
+              {summary}
+            </p>
           )}
         </div>
 
@@ -381,8 +392,9 @@ function TodoRow({
         {todo.dueAt !== null ? (
           <span
             className={cn(
-              'flex shrink-0 items-center gap-1 text-[11px] tabular-nums',
-              isOverdue(todo) ? 'text-destructive' : 'text-muted-foreground',
+              // 时间统一成小胶囊徽标：逾期红底、正常灰底，与日历的节假日徽标同语言
+              'flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] tabular-nums',
+              isOverdue(todo) ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground',
             )}
             title={isOverdue(todo) ? `已逾期 · ${dueLabel(todo.dueAt)}` : dueLabel(todo.dueAt)}
           >
