@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, X } from 'lucide-react';
 import { useTodosStore } from '@/stores/useTodosStore';
 import { dayInfo, type DayInfo } from '@/lib/lunar';
 import { holidayOf } from '@/lib/holidays';
@@ -82,7 +81,7 @@ export function WorkstationDockView(): React.JSX.Element {
   const clock = useMemo(() => clockOf(now), [now]);
   const dateLabel = useMemo(() => {
     const d = new Date(now);
-    return `${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]}`;
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]}`;
   }, [now]);
 
   // —— 双列布局判定（V67）：宽 ≥560 左计划 / 右日历，窄窗回落单列 ——
@@ -179,46 +178,44 @@ export function WorkstationDockView(): React.JSX.Element {
     };
   }, []);
 
-  const handleClose = (): void => {
-    // 收起（非退出）：窗口由 Rust 侧保留，恢复零开销
-    void ipc.workstationDockHide().catch(() => undefined);
-  };
-
   return (
     // Mica 材质上轻铺一层半透明底（不遮死壁纸染色），去阴影去描边 = 「长在桌面上」
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background/40">
-      {/* 标题栏：拖拽区 + 关闭 */}
-      <header
+      {/*
+        V76：去掉「工作台」标题栏与关闭按钮（用户明确：本来就只有一个工作台，
+        这个标题不提供任何信息，却实打实吃掉 36px 高度）。拖动改为时钟区兜底：
+        整块带 data-tauri-drag-region，时钟文字块也带一份，按住即可拖窗。
+      */}
+      <div
         data-tauri-drag-region
-        className="flex h-9 shrink-0 cursor-grab select-none items-center gap-2 border-b border-border/60 px-3 active:cursor-grabbing"
+        className="relative flex shrink-0 select-none items-end justify-between gap-2 px-3 pb-2 pt-2.5"
       >
-        <CalendarDays data-tauri-drag-region className="h-3.5 w-3.5 shrink-0 text-brand" />
-        <span data-tauri-drag-region className="flex-1 truncate text-xs font-medium text-foreground">
-          工作台
-        </span>
-        <button
-          type="button"
-          onClick={handleClose}
-          title="收起（设置中心可重新打开）"
-          aria-label="收起工作台停靠窗"
-          className="rounded p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
-      </header>
-
-      {/* 时钟头：时间 + 日期农历 */}
-      <div className="flex shrink-0 items-baseline justify-between gap-2 px-3 pb-2 pt-3">
-        <p className="flex items-baseline gap-1 tabular-nums text-brand">
-          <span className="text-2xl font-semibold">{clock.hhmm}</span>
-          <span className="text-xs font-medium text-brand/70">{clock.ss}</span>
-        </p>
-        <div className="min-w-0 text-right">
-          <p className="truncate text-xs font-medium text-foreground">{dateLabel}</p>
+        <div data-tauri-drag-region className="flex items-baseline gap-1.5">
+          <span
+            data-tauri-drag-region
+            className="tabular-nums text-[26px] font-semibold leading-none tracking-tight text-foreground"
+          >
+            {clock.hhmm}
+          </span>
+          <span
+            data-tauri-drag-region
+            className="rounded-md bg-brand-muted px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-brand"
+          >
+            :{clock.ss}
+          </span>
+        </div>
+        <div data-tauri-drag-region className="min-w-0 text-right leading-tight">
+          <p data-tauri-drag-region className="truncate text-xs font-medium tabular-nums text-foreground">
+            {dateLabel}
+          </p>
           {lunarLabel !== '' ? (
-            <p className="truncate text-[11px] text-muted-foreground">{lunarLabel}</p>
+            <p data-tauri-drag-region className="truncate text-[11px] text-muted-foreground">
+              {lunarLabel}
+            </p>
           ) : null}
         </div>
+        {/* 细渐变收边：替代原标题栏的分隔线，只做视觉「头」，不再占高度 */}
+        <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-brand/25 to-transparent" />
       </div>
 
       {/* 内容区（V68 双列，V71 等高撑满）：左计划（主操作区）/ 右日历。
@@ -237,7 +234,7 @@ export function WorkstationDockView(): React.JSX.Element {
               focusToken={focusToken}
             />
           </div>
-          <div className="flex min-h-0 w-[320px] shrink-0 flex-col gap-2 border-l border-border/60 pl-3">
+          <div className="flex min-h-0 w-[332px] shrink-0 flex-col gap-2 border-l border-border/60 pl-3">
             <div className="flex min-h-0 flex-1 flex-col">
               <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
             </div>

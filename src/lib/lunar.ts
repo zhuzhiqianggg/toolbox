@@ -265,6 +265,70 @@ export function solarToLunar(year: number, month: number, day: number): LunarDat
   };
 }
 
+/** 农历月天数（含闰月）；参数非法返回 `null` */
+export function lunarMonthDays(year: number, month: number, leap: boolean): number | null {
+  if (year < LUNAR_MIN_YEAR || year > LUNAR_MAX_YEAR || month < 1 || month > 12) {
+    return null;
+  }
+  if (leap) {
+    return leapMonth(year) === month ? leapMonthDays(year) : null;
+  }
+  return monthDays(year, month);
+}
+
+/** 某农历年是否有闰月，是则返回闰哪个月（1..12），无则 `0` */
+export function leapMonthOf(year: number): number {
+  if (year < LUNAR_MIN_YEAR || year > LUNAR_MAX_YEAR) {
+    return 0;
+  }
+  return leapMonth(year);
+}
+
+/**
+ * 农历 → 公历。
+ *
+ * 与 [`solarToLunar`] 共用同一张年表，两者互为逆运算：先用年表把
+ * 「农历年之前的总天数 + 当年月之前的天数 + 日偏移」累加出来，再加到
+ * 1900-01-31（农历 1900 年正月初一）上即可。
+ *
+ * @param year 农历年（1900–2100）
+ * @param month 农历月 1..12
+ * @param day 农历日 1..30
+ * @param leap 是否闰月（如「闰二月」传 `true`）
+ * @returns 对应的公历年月日；超出范围或该月不存在（如非闰年传 `leap`）返回 `null`
+ */
+export function lunarToSolar(
+  year: number,
+  month: number,
+  day: number,
+  leap = false,
+): { year: number; month: number; day: number } | null {
+  const days = lunarMonthDays(year, month, leap);
+  if (days === null || day < 1 || day > days) {
+    return null;
+  }
+
+  let offset = 0;
+  for (let y = LUNAR_MIN_YEAR; y < year; y += 1) {
+    offset += yearDays(y);
+  }
+  let found = false;
+  for (const slot of monthsOfYear(year)) {
+    if (slot.month === month && slot.leap === leap) {
+      found = true;
+      break;
+    }
+    offset += slot.days;
+  }
+  if (!found) {
+    return null;
+  }
+  offset += day - 1;
+
+  const date = new Date(LUNAR_BASE_UTC + offset * DAY_MS);
+  return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+}
+
 /**
  * 某公历年第 `termIndex` 个节气落在几号。
  *

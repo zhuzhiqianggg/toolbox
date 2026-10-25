@@ -267,6 +267,14 @@ export interface Anniversary {
    * `false` = 只在指定那一天命中（一次性事项）。
    */
   yearly: boolean;
+  /**
+   * 日期口径（V76）：
+   * - `solar`（缺省）= `date` 是公历，农历生日用户需自行换算；
+   * - `lunar` = `date` 存的是**农历**年月日，展示与命中时由 `lunarToSolar` 即时换算。
+   */
+  calendar?: 'solar' | 'lunar';
+  /** 仅农历有效：该日期是否落在闰月（如「闰二月十三」） */
+  leap?: boolean;
   /** 类型（决定日历上的图标与配色） */
   kind: 'birthday' | 'anniversary' | 'other';
 }
