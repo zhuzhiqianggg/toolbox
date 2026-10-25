@@ -258,6 +258,7 @@ export function UnitConverter({ initialInput = '' }: CommandProps): React.JSX.El
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">
             数值
             <Input
+              autoFocus
               type="number"
               value={value}
               onChange={(event) => setValue(event.target.value)}

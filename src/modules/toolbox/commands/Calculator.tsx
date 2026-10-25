@@ -362,6 +362,7 @@ export function Calculator({ initialInput = '' }: CommandProps): React.JSX.Eleme
           </label>
           <textarea
             id="calc-input"
+            autoFocus
             rows={2}
             className="w-full resize-none rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={expr}

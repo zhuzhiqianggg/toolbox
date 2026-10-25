@@ -6,13 +6,14 @@ import { ModuleView } from './components/ModuleView';
 import { SettingsCenter } from './components/SettingsCenter';
 import { useAppStore, type MainView } from '@/stores/useAppStore';
 import { NoteWindow } from '@/modules/notes/NoteWindow';
+import { WorkstationDockView } from '@/modules/workstation/WorkstationDockView';
 import { ReminderScheduler } from '@/modules/todos/ReminderScheduler';
 import { useTheme } from '@/hooks/useTheme';
 import { useHotkeyOpen } from '@/hooks/useHotkeyOpen';
-import { applyViewSize, initWindowShell } from '@/lib/windowShell';
+import { initWindowShell } from '@/lib/windowShell';
 
 /** 可挂载的窗口根类型（与 Rust 侧 WindowKind 对应） */
-export type WindowRoot = 'main' | 'note' | 'settings';
+export type WindowRoot = 'main' | 'note' | 'settings' | 'workstation';
 
 export interface AppProps {
   /** 由 main.tsx 依据 ?window= 参数注入 */
@@ -61,7 +62,7 @@ const App: FC<AppProps> = ({ windowRoot = 'main', noteId }) => {
 
   const view = useAppStore((state) => state.view);
 
-  // 窗口骨架启动装配（V15）：恢复上次尺寸 + 挂 resized 监听做持久化。仅主窗口。
+  // 窗口骨架启动装配（V15 → V64 单一持久几何）：恢复上次尺寸 + 位置，拖动 / 缩放落盘。仅主窗口。
   useEffect(() => {
     if (windowRoot !== 'main') {
       return;
@@ -83,16 +84,6 @@ const App: FC<AppProps> = ({ windowRoot = 'main', noteId }) => {
     };
   }, [windowRoot]);
 
-  // 视图切换套用预设尺寸（V15）：工具页 1180×820、模块 1080×760、设置 960×700、面板 780×560。
-  // 用户手动调整过尺寸后不再强行套用（windowShell 内部判定）。
-  const viewKind = view.kind;
-  useEffect(() => {
-    if (windowRoot !== 'main') {
-      return;
-    }
-    void applyViewSize(viewKind);
-  }, [viewKind, windowRoot]);
-
   // 便签多实例窗（V08）：无边框独立窗口，NoteWindow 自带拖拽/置顶/取色/防抖落库
   if (windowRoot === 'note') {
     if (!noteId) {
@@ -103,6 +94,11 @@ const App: FC<AppProps> = ({ windowRoot = 'main', noteId }) => {
       );
     }
     return <NoteWindow noteId={noteId} />;
+  }
+
+  // 工作台桌面停靠窗（V64）：贴屏右缘的置顶紧凑视图（时钟 / 日历 / 计划 / 便签）
+  if (windowRoot === 'workstation') {
+    return <WorkstationDockView />;
   }
 
   if (windowRoot !== 'main') {

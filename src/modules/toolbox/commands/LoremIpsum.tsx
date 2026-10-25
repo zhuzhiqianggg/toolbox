@@ -254,6 +254,7 @@ export function LoremIpsum(_props: CommandProps): React.JSX.Element {
             </Button>
             <input
               type="number"
+              autoFocus
               min={MIN_COUNT}
               max={MAX_COUNT}
               value={state.count}

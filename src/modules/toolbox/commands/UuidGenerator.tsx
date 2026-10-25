@@ -129,6 +129,7 @@ export function UuidGenerator({ initialInput = '' }: CommandProps): React.JSX.El
           <label className="flex flex-col gap-1 text-xs text-muted-foreground">
             数量（1-1000）
             <Input
+              autoFocus
               type="number"
               min={1}
               max={1000}

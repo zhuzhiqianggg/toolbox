@@ -238,6 +238,20 @@ export interface AppSettings {
    * 跟着 `settings.json` 一起被备份 / 还原即可。
    */
   anniversaries: Anniversary[];
+  /**
+   * 工作台是否停靠桌面右缘（V64，默认 `true`）。
+   *
+   * 开启时存在一块**独立置顶窗**（无边框、不进任务栏、不抢焦点）常驻桌面右侧，
+   * 展示时钟 / 日历 / 计划 / 便签 —— 与便签的「钉在桌面上」同一形态。
+   * 开关实际生效点：Rust 启动装配读本字段决定是否开窗；运行中由主窗口订阅变更
+   * 调 `workstation_dock_show` / `workstation_dock_hide`。
+   */
+  workstationDock: boolean;
+  /**
+   * 工作台停靠窗几何（逻辑像素，用户拖动 / 缩放停稳后由停靠窗自己落盘）。
+   * 缺省 = 首次使用，由 Rust 按「主屏右缘贴边、占满工作区高」计算默认值。
+   */
+  workstationDockGeometry?: { x: number; y: number; w: number; h: number };
 }
 
 /** 纪念日（生日 / 纪念日等自定日期） */

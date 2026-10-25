@@ -273,6 +273,7 @@ export function CsvJson({ initialInput = '' }: CommandProps): React.JSX.Element 
             </label>
             <textarea
               id="csvjson-input"
+              autoFocus
               rows={12}
               spellCheck={false}
               className="w-full min-h-[200px] flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"

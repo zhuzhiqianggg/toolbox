@@ -65,3 +65,6 @@ coverage/
 
 # 本机构建日志（build-release.sh 产出）
 .build-logs/
+
+# 本地安装包归集目录（deploy.ps1 产物，发布走 GitHub Release）
+installers/

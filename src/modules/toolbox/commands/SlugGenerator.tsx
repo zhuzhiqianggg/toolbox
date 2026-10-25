@@ -136,6 +136,7 @@ export function SlugGenerator({ initialInput = '' }: CommandProps): React.JSX.El
           <textarea
             id="slug-input"
             rows={4}
+            autoFocus
             className="w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={input}
             placeholder="输入文章标题 / 文件名，如：Toolbox 顺手 · 效率工具"

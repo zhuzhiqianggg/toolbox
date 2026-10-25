@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Info } from 'lucide-react';
+import { CalendarDays, Info, Pin } from 'lucide-react';
 import { isTauri } from '@/platform/detect';
+import { ipc } from '@/lib/ipc';
 import { useTodosStore } from '@/stores/useTodosStore';
 import { useNotesStore } from '@/stores/useNotesStore';
 import { dayInfo, ganZhi, type DayInfo } from '@/lib/lunar';
@@ -222,10 +223,24 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <p className="flex items-baseline gap-1 tabular-nums text-brand" title="当前时间（每秒刷新）">
-            <span className="text-2xl font-semibold">{clock.hhmm}</span>
-            <span className="text-sm font-medium text-brand/70">{clock.ss}</span>
-          </p>
+          <div className="flex items-center gap-2">
+            {/* 钉到桌面：把工作台以紧凑停靠窗常驻桌面右缘（V64） */}
+            <button
+              type="button"
+              onClick={() => {
+                void ipc.workstationDockShow().catch(() => undefined);
+              }}
+              title="钉到桌面右侧：常驻一块紧凑工作台（时钟 / 日历 / 计划 / 便签）"
+              className="flex h-7 items-center gap-1 rounded-md border border-border px-2 text-[11px] text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Pin className="h-3 w-3" />
+              钉到桌面
+            </button>
+            <p className="flex items-baseline gap-1 tabular-nums text-brand" title="当前时间（每秒刷新）">
+              <span className="text-2xl font-semibold">{clock.hhmm}</span>
+              <span className="text-sm font-medium text-brand/70">{clock.ss}</span>
+            </p>
+          </div>
           <p className="text-[11px] text-muted-foreground">
             当前查看：{relativeDayLabel(anchorMs)}
           </p>

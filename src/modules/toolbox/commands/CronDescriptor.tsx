@@ -306,6 +306,7 @@ export function CronDescriptor({ initialInput = '' }: CommandProps): React.JSX.E
           </div>
           <input
             id="cron-input"
+            autoFocus
             value={state.input}
             spellCheck={false}
             placeholder="0 9 * * 1-5   （标准 5 段：分 时 日 月 周）"

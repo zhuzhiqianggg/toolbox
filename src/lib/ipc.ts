@@ -183,6 +183,13 @@ export const ipc = {
   /** 设置主窗口是否始终置顶 */
   appSetPinned: (pinned: boolean): Promise<void> => call<void>('app_set_pinned', { pinned }),
 
+  // —— 工作台桌面停靠（V64）——
+
+  /** 显示（或首次创建）工作台停靠窗：贴屏右缘、置顶、不抢焦点的独立常驻窗 */
+  workstationDockShow: (): Promise<void> => call<void>('workstation_dock_show'),
+  /** 隐藏工作台停靠窗（窗口保留，本就不存在时幂等） */
+  workstationDockHide: (): Promise<void> => call<void>('workstation_dock_hide'),
+
   // —— 工作台「快捷入口」：系统级动作（Rust 侧白名单制）——
 
   /**

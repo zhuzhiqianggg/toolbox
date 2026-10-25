@@ -329,6 +329,7 @@ export function ApiTester({ initialInput }: CommandProps): React.JSX.Element {
           </select>
           <Input
             id="api-url"
+            autoFocus
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://api.example.com/v1/resource?limit=10"

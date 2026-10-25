@@ -86,6 +86,7 @@ export function PortQuery({ initialInput = '' }: CommandProps): React.JSX.Elemen
         <div className="flex items-center gap-2">
           <input
             type="text"
+            autoFocus
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
             placeholder="过滤：端口 / 进程名 / PID，如 8080、chrome"

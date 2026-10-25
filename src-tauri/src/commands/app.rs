@@ -12,9 +12,9 @@ use crate::platform::{self, PlatformInfo, PlatformOps};
 use crate::window;
 
 /// 配置存储文件名（与前端 `src/lib/store.ts` 保持一致）。
-const SETTINGS_STORE: &str = "settings.json";
+pub const SETTINGS_STORE: &str = "settings.json";
 /// 设置对象在存储中的键（`settings.json` → `settings`）。
-const SETTINGS_KEY: &str = "settings";
+pub const SETTINGS_KEY: &str = "settings";
 
 /// 返回当前平台信息与能力位（前端 `platform.ts` 数据来源）。
 #[tauri::command]
@@ -60,8 +60,20 @@ pub async fn app_set_pinned(app: AppHandle, pinned: bool) -> Result<(), String> 
     window::set_main_pinned(&app, pinned)
 }
 
+/// 显示（或首次创建）工作台桌面停靠窗（设置中心「工作台停靠桌面」开关的执行点）。
+#[tauri::command]
+pub async fn workstation_dock_show(app: AppHandle) -> Result<(), String> {
+    window::create_or_show_workstation_dock(&app)
+}
+
+/// 隐藏工作台桌面停靠窗（窗口保留，本就不存在时幂等）。
+#[tauri::command]
+pub async fn workstation_dock_hide(app: AppHandle) -> Result<(), String> {
+    window::hide_workstation_dock(&app)
+}
+
 /// 读取 `settings.json` → `settings` 对象（缺失时返回空对象）。
-fn load_settings(app: &AppHandle) -> Map<String, Value> {
+pub fn load_settings(app: &AppHandle) -> Map<String, Value> {
     let Ok(store) = app.store(SETTINGS_STORE) else {
         return Map::new();
     };

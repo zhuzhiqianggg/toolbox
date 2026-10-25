@@ -1156,6 +1156,7 @@ export function TextDiff({ initialInput = '' }: CommandProps): React.JSX.Element
               </span>
               <textarea
                 aria-label="原文本 A"
+                autoFocus
                 value={textA}
                 onChange={(event) => patch({ textA: event.target.value })}
                 placeholder="原文本 A（粘贴后自动对比；内容会保留到下次打开）"

@@ -342,6 +342,7 @@ export function RegexTester({ initialInput = '' }: CommandProps): React.JSX.Elem
             <span className="font-mono text-sm text-muted-foreground">/</span>
             <Input
               id="re-pattern"
+              autoFocus
               className="font-mono"
               value={state.pattern}
               spellCheck={false}

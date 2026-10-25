@@ -528,6 +528,11 @@ export function SettingsCenter({
             description="开启后 Toolbox 会浮在所有窗口之上；默认关闭，避免挡住系统弹框与其它软件"
             field="mainPinned"
           />
+          <BooleanRow
+            title="工作台停靠桌面"
+            description="在桌面右侧常驻一块置顶工作台（时钟 / 日历 / 计划 / 便签），不抢焦点；位置大小可拖拽调整"
+            field="workstationDock"
+          />
         </section>
 
         <Separator />

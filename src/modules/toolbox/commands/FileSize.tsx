@@ -131,6 +131,7 @@ export function FileSize({ initialInput = '' }: CommandProps): React.JSX.Element
                 </label>
                 <Input
                   id="fs-bytes"
+                  autoFocus
                   type="number"
                   min={0}
                   value={bytesInput}
@@ -162,6 +163,7 @@ export function FileSize({ initialInput = '' }: CommandProps): React.JSX.Element
                 </label>
                 <Input
                   id="fs-value"
+                  autoFocus
                   type="number"
                   min={0}
                   value={valueInput}

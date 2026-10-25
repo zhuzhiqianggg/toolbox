@@ -67,6 +67,8 @@ pub fn run() {
             commands::app::app_hide_main,
             commands::app::app_toggle_main,
             commands::app::app_set_pinned,
+            commands::app::workstation_dock_show,
+            commands::app::workstation_dock_hide,
             commands::app::module_list_state,
             commands::app::module_set_enabled,
             commands::app::hotkey_update,
@@ -132,6 +134,17 @@ pub fn run() {
             }
             // 主窗口关闭 → 隐藏到托盘（常驻，不退出应用）
             window::attach_close_to_tray(app.handle());
+            // 工作台桌面停靠（V64）：默认开启（settings.workstationDock = false 关闭），
+            // 贴主屏右缘、占满工作区高度；用户拖动 / 缩放后的几何由前端落盘、重启恢复。
+            let dock_enabled = commands::app::load_settings(app.handle())
+                .get("workstationDock")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true);
+            if dock_enabled {
+                if let Err(err) = window::create_or_show_workstation_dock(app.handle()) {
+                    eprintln!("[Toolbox] 工作台停靠窗创建失败：{err}");
+                }
+            }
             // SQLite 主数据层（WAL + 版本迁移）
             match db::init(app.handle()) {
                 Ok(path) => println!("[Toolbox] 数据库就绪：{}", path.display()),

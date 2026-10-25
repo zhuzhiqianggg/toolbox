@@ -292,7 +292,7 @@ export function ColorConverter({ initialInput = '' }: CommandProps): React.JSX.E
           </div>
         </div>
 
-        <Field label="HEX" value={hex} onChange={onHex} valid={currentRgb !== null} copy={hex} mono />
+        <Field label="HEX" value={hex} onChange={onHex} valid={currentRgb !== null} copy={hex} mono autoFocus />
         <Field
           label="RGB"
           value={rgbStr}
@@ -321,9 +321,10 @@ interface FieldProps {
   valid: boolean;
   copy: string;
   mono?: boolean;
+  autoFocus?: boolean;
 }
 
-function Field({ label, value, onChange, valid, copy, mono }: FieldProps): React.JSX.Element {
+function Field({ label, value, onChange, valid, copy, mono, autoFocus }: FieldProps): React.JSX.Element {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
@@ -332,6 +333,7 @@ function Field({ label, value, onChange, valid, copy, mono }: FieldProps): React
       </div>
       <input
         type="text"
+        autoFocus={autoFocus}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         className={

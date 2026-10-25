@@ -121,6 +121,7 @@ export function TextDedupe({ initialInput = '' }: CommandProps): React.JSX.Eleme
           <textarea
             id="dedup-input"
             rows={12}
+            autoFocus
             className="w-full min-h-0 flex-1 rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             value={input}
             placeholder={'apple\nApple\n banana\napple'}

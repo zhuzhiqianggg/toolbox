@@ -141,4 +141,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   quickActionsCustomized: false,
   // 纪念日默认空：属于用户私有数据，不预置任何条目
   anniversaries: [],
+  // 工作台默认停靠桌面右缘（V64 用户需求：像便签一样常驻桌面盯住）
+  workstationDock: true,
 };

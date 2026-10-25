@@ -46,6 +46,8 @@ function resolveWindow(search: string): WindowTarget {
   switch (raw) {
     case 'settings':
       return { windowRoot: 'settings' };
+    case 'workstation':
+      return { windowRoot: 'workstation' };
     default:
       return { windowRoot: 'main' };
   }
@@ -133,12 +135,20 @@ function start(): void {
       console.error('[Toolbox] 启动装配失败：', error);
     });
 
-  // 窗口形态设置（主窗口置顶）的唯一驱动点：**只由主窗口**订阅。
+  // 窗口形态设置的唯一驱动点：**只由主窗口**订阅。
   if (target.windowRoot === 'main') {
     useAppStore.subscribe((state, prev) => {
       // 置顶默认关：开着才让主窗口浮在最上层（否则会盖住系统弹框 / 其它软件）
       if (state.settings.mainPinned !== prev.settings.mainPinned) {
         void ipc.appSetPinned(state.settings.mainPinned).catch(() => undefined);
+      }
+      // 工作台桌面停靠（V64）：开关切换即时开 / 收停靠窗（启动时的首次开窗由 Rust 装配负责）
+      if (state.settings.workstationDock !== prev.settings.workstationDock) {
+        if (state.settings.workstationDock) {
+          void ipc.workstationDockShow().catch(() => undefined);
+        } else {
+          void ipc.workstationDockHide().catch(() => undefined);
+        }
       }
     });
   }

@@ -499,6 +499,7 @@ export function TextLab({ initialInput = '' }: CommandProps): React.JSX.Element 
           </div>
           <textarea
             id="lab-text"
+            autoFocus
             spellCheck={false}
             value={state.text}
             onChange={(event) => patch({ text: event.target.value })}
