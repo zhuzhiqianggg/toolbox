@@ -235,10 +235,10 @@ fn default_dock_geometry(app: &AppHandle) -> (f64, f64, f64, f64) {
 
 /// 创建（或显示已存在的）工作台停靠窗。
 ///
-/// - **透明 + Acrylic 亚克力材质 + 无阴影**（V65：让窗口「长在桌面上」而非浮块）：
-///   桌面壁纸透过磨砂底色若隐若现，随系统深浅色主题变化；
-/// - 置顶 + 不进任务栏 + **不抢焦点**（`focused(false)`）：常驻「盯住」窗，
-///   出现时不打断用户正在输入的任何窗口；
+/// - **桌面层挂件**（V68 用户口径）：不再置顶 —— 开窗后 `pin_to_desktop` 把窗口
+///   挂到 shell 的 WorkerW 层（壁纸之上、桌面图标之下），任何应用窗口都能盖住它，
+///   回到桌面才可见，真正「长在桌面上」；
+/// - Mica 材质 + 无阴影 + 不进任务栏 + **不抢焦点**（`focused(false)`）；
 /// - 几何：`settings.workstationDockGeometry`（前端拖动 / 缩放后落盘）优先，
 ///   首次使用取主显示器右缘贴边、上下严丝合缝的默认值；
 /// - 已存在同 label 窗口 → 仅显示（不重复聚焦，避免打断）。
@@ -273,7 +273,6 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     .resizable(true)
     .maximizable(false)
     .minimizable(false)
-    .always_on_top(true)
     .focused(false)
     .skip_taskbar(true)
     .effects(WindowEffectsConfig {
@@ -289,9 +288,56 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     .position(x, y)
     .build()
     .map_err(|err| format!("创建工作台停靠窗失败：{err}"))?;
+    // 挂到桌面层（V68）：壁纸之上、图标之下，普通窗口之下 —— 属于桌面本身
+    #[cfg(target_os = "windows")]
+    {
+        let win = app.get_webview_window(WORKSTATION_LABEL);
+        if let Some(win) = win {
+            match win.hwnd() {
+                // tauri 依赖树里的 windows（0.61）与本项目直接依赖的 windows（0.58）
+                // 是两个不同 crate，HWND 类型不互通 —— 走裸指针跨过这条版本边界
+                Ok(hwnd) => pin_workstation_to_desktop(windows::Win32::Foundation::HWND(hwnd.0)),
+                Err(err) => eprintln!("[Toolbox] 停靠窗取 HWND 失败（保持普通窗口形态）：{err}"),
+            }
+        }
+    }
     // 关闭钮 → 隐藏（窗口常驻，恢复零开销；不销毁也就无需重建几何）
     attach_workstation_dock_close_to_hide(app);
     Ok(())
+}
+
+/// 将停靠窗挂到桌面层（V68，仅 Windows）。
+///
+/// 经典 WorkerW 技巧：给桌面宿主 Progman 发 `0x052C` 消息，shell 会在壁纸与
+/// 图标层之间生成一个 WorkerW；再把我们的 HWND `SetParent` 过去 —— 窗口从此
+/// 属于桌面本身：回到桌面才可见、可交互，任何普通窗口都能盖住它。
+///
+/// 失败时静默降级为普通窗口形态（功能不受影响，只是层次回到普通窗口）。
+#[cfg(target_os = "windows")]
+fn pin_workstation_to_desktop(hwnd: windows::Win32::Foundation::HWND) {
+    use windows::core::w;
+    use windows::Win32::Foundation::{LPARAM, WPARAM};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        FindWindowExW, FindWindowW, SendMessageW, SetParent,
+    };
+
+    unsafe {
+        // 1) Progman = 桌面窗口宿主
+        let Ok(progman) = FindWindowW(w!("Progman"), None) else {
+            return;
+        };
+        // 2) 幂等触发：shell 收到 0x052C 后生成 WorkerW（仅首次生效）
+        SendMessageW(progman, 0x052C, WPARAM(0), LPARAM(0));
+        // 3) 图标层 SHELLDLL_DefView 通常挂在 Progman 直属
+        let defview = FindWindowExW(progman, None, w!("SHELLDLL_DefView"), None).ok();
+        // 4) 目标父窗 = 图标层之后的第一个兄弟 WorkerW
+        //    （windows 0.58 的 Param 只认 Option<&HWND> 借用形态，owned Option 不过 bound）
+        let Ok(worker) = FindWindowExW(None, defview.as_ref(), w!("WorkerW"), None) else {
+            return;
+        };
+        // 5) 挂过去（壁纸之上、图标之下、一切普通窗口之下）
+        let _ = SetParent(hwnd, worker);
+    }
 }
 
 /// 隐藏工作台停靠窗（窗口保留，恢复零开销；本就不存在时为幂等空操作）。
