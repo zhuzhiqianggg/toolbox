@@ -46,6 +46,11 @@ export interface PlanPanelProps {
   onHideDoneChange: (value: boolean) => void;
   /** 递增信号：变化时聚焦新增输入框（由日历点击触发） */
   focusToken: number;
+  /**
+   * 玻璃拟态（V82）：桌面停靠窗传 true —— 卡片半透明 + 去阴影，
+   * 让 Mica 壁纸染色透上来，看起来「长在桌面上」而不是一块悬浮白板。
+   */
+  glass?: boolean;
 }
 
 /** 范围 chip 顺序（`day` 的文案在渲染时按选中日期动态显示） */
@@ -59,6 +64,7 @@ export function PlanPanel({
   hideDone,
   onHideDoneChange,
   focusToken,
+  glass = false,
 }: PlanPanelProps): React.JSX.Element {
   const [draft, setDraft] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -174,7 +180,14 @@ export function PlanPanel({
   );
 
   return (
-    <section className="flex h-full min-h-[260px] flex-col gap-2.5 overflow-hidden rounded-xl border border-border bg-card p-3 shadow-panel lg:min-h-0">
+    <section
+      className={cn(
+        'flex h-full min-h-[260px] flex-col gap-2.5 overflow-hidden rounded-xl border p-3 lg:min-h-0',
+        glass
+          ? 'border-border/40 bg-card/60 shadow-none'
+          : 'border-border bg-card shadow-panel',
+      )}
+    >
       <header className="flex shrink-0 items-center gap-2">
         {/* 与日历面板同一套「柔色底 + 同色字」图标块语言，两块面板并排才不打架 */}
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-400">

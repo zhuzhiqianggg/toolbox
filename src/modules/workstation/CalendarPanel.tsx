@@ -28,6 +28,7 @@ import {
   yearsSince,
 } from '@/lib/anniversaries';
 import { buildMonthGrid, dayLabel, isSameDay, startOfDay } from './planUtils';
+import { dayDetailOf } from '@/lib/almanac';
 
 /**
  * 工作台月历面板（V21 增强）。
@@ -63,6 +64,11 @@ export interface CalendarPanelProps {
    * 桌面停靠窗传 false —— 那里只做展示，配置统一回主界面（用户口径）。
    */
   anniversariesEditable?: boolean;
+  /**
+   * 玻璃拟态（V82）：桌面停靠窗传 true（卡片半透明、去阴影，透出 Mica 壁纸染色）。
+   * 主界面保持实色卡片，避免内容叠在壁纸上看不清。
+   */
+  glass?: boolean;
 }
 
 /** 星期表头（周一开始，与 startOfWeek 一致） */
@@ -73,6 +79,7 @@ export function CalendarPanel({
   onSelect,
   pendingByDay,
   anniversariesEditable = true,
+  glass = false,
 }: CalendarPanelProps): React.JSX.Element {
   const editable = anniversariesEditable;
   const anchorDate = useMemo(() => new Date(anchorMs), [anchorMs]);
@@ -121,6 +128,15 @@ export function CalendarPanel({
   }, [cells]);
 
   const nextHolidays = useMemo(() => upcomingHolidays(Date.now(), 1), []);
+
+  /**
+   * 选中日详情（V82）：点哪天就把这天「阳历 + 农历 + 节气节日 + 宜忌冲煞 + 当日纪念日」
+   * 摊开在日历下面。此前选中日没有任何详情区，只在底部挂一个「生日与纪念日」入口，
+   * 用户直评「不要直接什么都没有，还要写个什么纪念日」。
+   */
+  const detail = useMemo(() => dayDetailOf(anchorMs), [anchorMs]);
+  const dayMarks = useMemo(() => anniversariesOf(anniversaries, anchorMs), [anniversaries, anchorMs]);
+  const dayPending = pendingByDay.get(startOfDay(anchorMs)) ?? 0;
 
   const shiftMonth = (delta: number): void => {
     setView((prev) => {
@@ -220,7 +236,14 @@ export function CalendarPanel({
   const gz = ganZhi(view.year);
 
   return (
-    <section className="scrollbar-thin flex h-full min-h-0 flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-card p-2.5 shadow-panel">
+    <section
+      className={cn(
+        'scrollbar-thin flex h-full min-h-0 flex-col gap-2 overflow-y-auto rounded-xl border p-2.5',
+        glass
+          ? 'border-border/40 bg-card/60 shadow-none'
+          : 'border-border bg-card shadow-panel',
+      )}
+    >
       {/* V81 区块化：头部 / 网格 / 纪念日各自成「方块」（浅底或细边框圆角块），
           面板不再是一锅平铺的散件 —— 用户口径「每个部分设成方块」 */}
       <header className="shrink-0 rounded-lg bg-muted/40 px-2.5 py-2">
@@ -274,7 +297,7 @@ export function CalendarPanel({
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1 lg:flex-1">
+        <div className="grid grid-cols-7 gap-1.5 lg:flex-1">
         {cells.map((dayMs) => {
           const date = new Date(dayMs);
           const inMonth = date.getMonth() === view.month && date.getFullYear() === view.year;
@@ -307,7 +330,9 @@ export function CalendarPanel({
               onClick={() => onSelect(dayMs)}
               title={tooltip}
               className={cn(
-                'group relative flex min-h-[44px] flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 transition',
+                // V82：格子放大到 min-h-52 —— 下面要放「日 + 农历 + 角标」三层，
+                // 44px 时角标会压字；选中日详情上移后，格子也有余量长高
+                'group relative flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 transition',
                 inMonth ? 'text-foreground' : 'text-muted-foreground/45',
                 !isSelected && 'hover:bg-accent',
                 isSelected && 'bg-brand text-brand-foreground',
@@ -315,11 +340,11 @@ export function CalendarPanel({
                 isOff && !isSelected && !isToday && 'bg-destructive/[0.07]',
               )}
             >
-              {/* 第一行：公历日 + 待办数（V76 放大到 14px，格子不再显小） */}
+              {/* 第一行：公历日 + 待办数（V82 放大到 15px，格子变大后数字也跟得上） */}
               <span className="flex w-full items-baseline justify-center gap-1 leading-none">
                 <span
                   className={cn(
-                    'tabular-nums text-sm font-semibold',
+                    'tabular-nums text-[15px] font-semibold',
                     isOff && !isSelected && 'text-destructive',
                   )}
                 >
@@ -353,11 +378,25 @@ export function CalendarPanel({
                 {meta?.info.badge ?? ''}
               </span>
 
-              {/* 角标：休 / 班 / 纪念日 */}
+              {/* 第三行：角标 —— 休 / 班 / 生日 / 纪念日
+                  V82：生日用粉色蛋糕、其它纪念日用紫色礼盒，两类一眼可分 */}
               {isOff || isMakeup || marks.length > 0 ? (
-                <span className="absolute right-0.5 top-0.5 flex items-center gap-0.5">
-                  {marks.length > 0 ? (
-                    <Cake className={cn('h-2.5 w-2.5', isSelected ? 'text-brand-foreground/80' : 'text-pink-500')} />
+                <span className="absolute right-0.5 top-0.5 flex items-center gap-1">
+                  {marks.some((item) => item.kind === 'birthday') ? (
+                    <Cake
+                      className={cn(
+                        'h-3 w-3',
+                        isSelected ? 'text-brand-foreground/85' : 'text-pink-500',
+                      )}
+                    />
+                  ) : null}
+                  {marks.some((item) => item.kind !== 'birthday') ? (
+                    <Gift
+                      className={cn(
+                        'h-3 w-3',
+                        isSelected ? 'text-brand-foreground/85' : 'text-violet-500',
+                      )}
+                    />
                   ) : null}
                   {isOff ? (
                     <span className="rounded bg-destructive/15 px-0.5 text-[9px] leading-[11px] text-destructive">
@@ -397,7 +436,108 @@ export function CalendarPanel({
         </div>
       </div>
 
-      {/* 生日与纪念日（V81：区块化浅底块；主界面可增删，停靠窗只读展示） */}
+      {/*
+        * 选中日详情（V82）—— 用户口径：点某一天，下方要摊开这天的详细信息
+        * （阳历全称 / 农历 / 干支 / 节气节日 / 宜忌 / 冲煞 / 当日纪念日与待办），
+        * 而不是只在底部挂一个「生日与纪念日」入口、内容一片空白。
+        */}
+      <div className="shrink-0 rounded-lg bg-muted/40 p-2.5">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[15px] font-semibold leading-none tabular-nums text-foreground">
+            {detail.solarFull}
+          </span>
+          <span className="text-[11px] leading-none text-muted-foreground">{detail.weekday}</span>
+          <span
+            className="ml-auto shrink-0 rounded bg-card px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground"
+            title={detail.almanac.yearGanZhi}
+          >
+            {detail.almanac.dayGanZhi}
+          </span>
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px] leading-none text-muted-foreground">
+          <span>{detail.lunarFull}</span>
+          <span className="text-muted-foreground/40">·</span>
+          <span>{detail.almanac.yearGanZhi}</span>
+          {detail.special !== null ? (
+            <span className="rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+              {detail.special}
+            </span>
+          ) : null}
+        </div>
+
+        {/* 宜 / 忌：绿=宜、红=忌，与「休/班」徽标同一套语义色 */}
+        <div className="mt-2 space-y-1">
+          <div className="flex items-start gap-1.5">
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-emerald-500/15 text-[10px] font-semibold leading-none text-emerald-600 dark:text-emerald-400">
+              宜
+            </span>
+            <span className="text-[11px] leading-relaxed text-foreground/85">
+              {detail.almanac.yi.join(' · ')}
+            </span>
+          </div>
+          <div className="flex items-start gap-1.5">
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-rose-500/15 text-[10px] font-semibold leading-none text-rose-600 dark:text-rose-400">
+              忌
+            </span>
+            <span className="text-[11px] leading-relaxed text-muted-foreground">
+              {detail.almanac.ji.join(' · ')}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[10px] leading-none text-muted-foreground/80">
+          <span>{detail.almanac.jianChu}日</span>
+          <span className="text-muted-foreground/40">·</span>
+          <span>{detail.almanac.chongSha}</span>
+          <span className="ml-auto">
+            {dayPending > 0 ? `${dayPending} 项待办` : '当日无待办'}
+          </span>
+        </div>
+
+        {/* 当日生日 / 纪念日：有就列出来，没有就不占位 */}
+        {dayMarks.length > 0 ? (
+          <ul className="mt-2 space-y-1 border-t border-border/50 pt-2">
+            {dayMarks.map((item) => {
+              const birthday = item.kind === 'birthday';
+              const years = yearsSince(item, new Date(anchorMs).getFullYear());
+              const lunarText = anniversaryLunarLabel(item);
+              return (
+                <li key={item.id} className="flex items-center gap-1.5">
+                  <span
+                    className={cn(
+                      'flex h-4 w-4 shrink-0 items-center justify-center rounded',
+                      birthday
+                        ? 'bg-pink-500/15 text-pink-500'
+                        : 'bg-violet-500/15 text-violet-500',
+                    )}
+                  >
+                    {birthday ? <Cake className="h-2.5 w-2.5" /> : <Gift className="h-2.5 w-2.5" />}
+                  </span>
+                  <span className="truncate text-[11px] font-medium text-foreground">
+                    {item.label}
+                  </span>
+                  {item.yearly ? (
+                    <span className="shrink-0 rounded bg-card px-1 text-[10px] text-muted-foreground">
+                      {birthday ? `${years} 岁` : `第 ${years} 年`}
+                    </span>
+                  ) : null}
+                  {lunarText !== null ? (
+                    <span className="ml-auto shrink-0 text-[10px] text-muted-foreground/75">
+                      {lunarText}
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+      </div>
+
+      {/* 生日与纪念日管理（V82：只在可编辑的主界面出现；停靠窗已由上方
+          「选中日详情」展示当天条目，再留一个空的折叠入口就是用户说的
+          「还要在下面写个什么纪念日」） */}
+      {editable ? (
       <div className="shrink-0 rounded-lg bg-muted/40">
         <button
           type="button"
@@ -409,11 +549,6 @@ export function CalendarPanel({
           <span className="text-[10px] text-muted-foreground">
             {anniversaries.length > 0 ? `${anniversaries.length} 条` : '还没有记录'}
           </span>
-          {!editable ? (
-            <span className="rounded bg-muted px-1 py-0.5 text-[9px] text-muted-foreground/70">
-              主界面配置
-            </span>
-          ) : null}
           <ChevronDown
             className={cn('ml-auto h-3.5 w-3.5 text-muted-foreground transition', showAnniversaries && 'rotate-180')}
           />
@@ -617,6 +752,7 @@ export function CalendarPanel({
           </div>
         ) : null}
       </div>
+      ) : null}
     </section>
   );
 }

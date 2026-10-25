@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTodosStore } from '@/stores/useTodosStore';
-import { dayInfo, type DayInfo } from '@/lib/lunar';
-import { holidayOf } from '@/lib/holidays';
 import { patchSettings } from '@/lib/store';
 import { isTauri } from '@/platform/detect';
 import { ipc } from '@/lib/ipc';
@@ -30,9 +28,6 @@ import { pendingCountByDay, startOfDay, type PlanScope } from './planUtils';
 /** 几何落库防抖（拖动 / 缩放停稳后写入，与便签同口径） */
 const GEOMETRY_SAVE_DEBOUNCE_MS = 500;
 
-/** 中文星期（getDay：0 = 周日） */
-const WEEKDAYS: readonly string[] = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-
 /**
  * dock 内「应用内跳转」的跨窗实现（V72）：
  * 停靠窗与主窗各有独立 JS 上下文，本窗 setView 主窗看不到 —— 先唤起主窗
@@ -53,23 +48,6 @@ function clockOf(ms: number): { hhmm: string; ss: string } {
   return { hhmm: `${pad(d.getHours())}:${pad(d.getMinutes())}`, ss: pad(d.getSeconds()) };
 }
 
-/** 农历 / 节气 / 假日摘要（与主工作台同一优先级：节日 > 假日 > 节气） */
-function daySuffix(info: DayInfo, holidayName: string | null): string {
-  if (info.lunarFestival !== null) {
-    return info.lunarFestival;
-  }
-  if (holidayName !== null) {
-    return holidayName;
-  }
-  if (info.term !== null) {
-    return info.term;
-  }
-  if (info.lunar !== null) {
-    return `农历${info.lunar.monthName}${info.lunar.dayName}`;
-  }
-  return '';
-}
-
 export function WorkstationDockView(): React.JSX.Element {
   // —— 时钟（每秒刷新，与系统时间同步）——
   const [now, setNow] = useState<number>(() => Date.now());
@@ -79,11 +57,6 @@ export function WorkstationDockView(): React.JSX.Element {
   }, []);
 
   const clock = useMemo(() => clockOf(now), [now]);
-  // V81：日期不再带年份（日历块头部已有「2026 年 10 月」，顶栏重复一遍只添噪音）
-  const dateLabel = useMemo(() => {
-    const d = new Date(now);
-    return `${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]}`;
-  }, [now]);
 
   // —— 双列布局判定（V78）：宽 ≥660 左计划 / 右日历，窄窗回落单列 ——
   // V77 及以前阈值是 560，而右列固定 332 —— 620~700 宽时左列只剩 200 出头，
@@ -96,11 +69,6 @@ export function WorkstationDockView(): React.JSX.Element {
     return () => window.removeEventListener('resize', onResize);
   }, []);
   const twoCol = windowW >= 660;
-  const lunarLabel = useMemo(() => {
-    const d = new Date(now);
-    const info = dayInfo(d.getFullYear(), d.getMonth() + 1, d.getDate());
-    return daySuffix(info, holidayOf(d.getFullYear(), d.getMonth() + 1, d.getDate()).name);
-  }, [now]);
 
   // —— 待办（与主窗口同源数据层；便签按 V65 要求不进停靠窗）——
   const todos = useTodosStore((state) => state.todos);
@@ -184,7 +152,7 @@ export function WorkstationDockView(): React.JSX.Element {
 
   return (
     // Mica 材质上轻铺一层半透明底（不遮死壁纸染色），去阴影去描边 = 「长在桌面上」
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background/40">
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background/25">
       {/*
         V76：去掉「工作台」标题栏与关闭按钮（用户明确：本来就只有一个工作台，
         这个标题不提供任何信息，却实打实吃掉 36px 高度）。拖动改为时钟区兜底：
@@ -214,23 +182,11 @@ export function WorkstationDockView(): React.JSX.Element {
             :{clock.ss}
           </span>
         </div>
-        <div data-tauri-drag-region className="min-w-0 text-right">
-          <p
-            data-tauri-drag-region
-            className="truncate text-[12px] font-medium leading-none tabular-nums text-foreground/90"
-          >
-            {dateLabel}
-          </p>
-          {lunarLabel !== '' ? (
-            <p
-              data-tauri-drag-region
-              className="mt-1 truncate text-[10px] leading-none text-muted-foreground/80"
-            >
-              {lunarLabel}
-            </p>
-          ) : null}
-        </div>
-        {/* 细渐变收边：替代原标题栏的分隔线，只做视觉「头」，不再占高度 */}
+        {/*
+          * V82：顶栏右侧的「日期 + 农历」整块删掉 —— 用户口径：Windows 任务栏
+          * 本来就有时间日期，这里再放一遍纯属重复；而且选中日详情里已经给出
+          * 更完整的阳历 / 农历 / 干支。顶栏只留时钟当视觉锚点，腾出的高度给面板。
+          */}
         <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-brand/25 to-transparent" />
       </div>
 
@@ -248,6 +204,7 @@ export function WorkstationDockView(): React.JSX.Element {
               hideDone={hideDone}
               onHideDoneChange={setHideDone}
               focusToken={focusToken}
+              glass
             />
           </div>
           <div className="flex min-h-0 flex-1 flex-col gap-2">
@@ -258,6 +215,7 @@ export function WorkstationDockView(): React.JSX.Element {
                 onSelect={handleSelectDay}
                 pendingByDay={pendingByDay}
                 anniversariesEditable={false}
+                glass
               />
             </div>
             <QuickActionsRail variant="dock" onNavigate={dockNavigate} />
@@ -275,6 +233,7 @@ export function WorkstationDockView(): React.JSX.Element {
               hideDone={hideDone}
               onHideDoneChange={setHideDone}
               focusToken={focusToken}
+              glass
             />
           </div>
           <div className="flex shrink-0 flex-col gap-2">

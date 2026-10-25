@@ -233,6 +233,27 @@ fn default_dock_geometry(app: &AppHandle) -> (f64, f64, f64, f64) {
     (x + w - DOCK_DEFAULT_W, y, DOCK_DEFAULT_W, h)
 }
 
+/// 停靠窗「该不该显示」的用户意图（V82，仅 Windows）。
+///
+/// Win11 对**不可最小化**的窗口执行「显示桌面」（Win+D）时不会把它最小化，
+/// 而是直接 `SW_HIDE` —— 这正是 V79「只盯 IsIconic」看守失效的根因
+/// （用户实测：显示桌面后工作台照样消失）。所以看守必须区分两种「不可见」：
+/// - 用户点关闭钮 / 命令隐藏（意图 = 不显示）→ 不恢复；
+/// - 显示桌面把窗口藏掉或压成最小化（意图 = 显示）→ 立刻无焦点还原。
+#[cfg(target_os = "windows")]
+static DOCK_WANTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// 看守线程是否已在跑（窗口只创建一次，这里防重复起线程）。
+#[cfg(target_os = "windows")]
+static DOCK_WATCHER_RUNNING: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// 记录「用户希望停靠窗可见」（开窗 / 显示时调用）。
+#[cfg(target_os = "windows")]
+fn set_dock_wanted(value: bool) {
+    DOCK_WANTED.store(value, std::sync::atomic::Ordering::SeqCst);
+}
+
 /// 创建（或显示已存在的）工作台停靠窗。
 ///
 /// - **普通顶层窗口**（V79 回退）：V78 曾用经典 WorkerW 技巧把窗口 `SetParent` 到
@@ -244,13 +265,14 @@ fn default_dock_geometry(app: &AppHandle) -> (f64, f64, f64, f64) {
 ///   首次使用取主显示器右缘贴边、上下严丝合缝的默认值；
 /// - 已存在同 label 窗口 → 仅显示（不重复聚焦，避免打断）。
 pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
+    // V82：先立「意图 = 可见」，看守线程才不会把这次显示又当成误弹
+    #[cfg(target_os = "windows")]
+    set_dock_wanted(true);
+
     if let Some(existing) = app.get_webview_window(WORKSTATION_LABEL) {
         let _ = existing.show();
         #[cfg(target_os = "windows")]
-        if existing.is_minimized().unwrap_or(false) {
-            // 上次被「显示桌面」压掉过：立刻还原（看守线程通常已处理，这里再兜一次）
-            restore_dock_without_focus(&existing);
-        }
+        restore_dock_if_hidden(&existing);
         return Ok(());
     }
 
@@ -302,51 +324,76 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// 以「不抢焦点」的方式把停靠窗从最小化态还原（仅 Windows）。
+/// 把停靠窗从「被最小化 / 被隐藏」里以**不抢焦点**的方式还原（仅 Windows）。
 ///
-/// 不用 Tauri 的 `unminimize()`：它内部走 `ShowWindow(SW_RESTORE)`，而 `SW_RESTORE`
-/// **会激活窗口** —— 用户一按 Win+D，桌面上的焦点就被工作台抢走。`SW_SHOWNOACTIVATE`
-/// 同样能把最小化窗口还原到「最近一次的大小与位置」，但保持不激活。
+/// 判断一律走 raw Win32：Tauri/tao 的 `is_visible()` 是自身缓存的镜像，
+/// Explorer 从外部 `SW_HIDE` 后它未必能反映真实状态（V79 看守失效的原因之一）。
+///
+/// 顺序：`SW_SHOWNOACTIVATE` 先把窗口摆回上次的位置与大小（不激活，桌面焦点不被打断），
+/// 若仍是 minimized 再用 `SW_RESTORE` 兜底 —— 个别 shell 版本只认后者。
 #[cfg(target_os = "windows")]
-fn restore_dock_without_focus(win: &WebviewWindow) {
+fn restore_dock_if_hidden(win: &WebviewWindow) {
     use windows::Win32::Foundation::HWND;
-    use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_SHOWNOACTIVATE};
+    use windows::Win32::UI::WindowsAndMessaging::{
+        IsIconic, IsWindow, IsWindowVisible, ShowWindow, SW_RESTORE, SW_SHOWNOACTIVATE,
+    };
 
-    if let Ok(hwnd) = win.hwnd() {
-        unsafe {
-            let _ = ShowWindow(HWND(hwnd.0 as *mut core::ffi::c_void), SW_SHOWNOACTIVATE);
+    let Ok(hwnd) = win.hwnd() else {
+        return;
+    };
+    let hwnd = HWND(hwnd.0 as *mut core::ffi::c_void);
+    unsafe {
+        if !IsWindow(hwnd).as_bool() {
+            return;
+        }
+        // 可见且非最小化 = 正常状态，什么都不用做
+        if IsWindowVisible(hwnd).as_bool() && !IsIconic(hwnd).as_bool() {
+            return;
+        }
+        let _ = ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+        if IsIconic(hwnd).as_bool() {
+            let _ = ShowWindow(hwnd, SW_RESTORE);
         }
     }
 }
 
-/// 停靠窗「桌面常驻」看守（V79，仅 Windows）。
+/// 停靠窗「桌面常驻」看守（V79 起，V82 重写判断口径）。
 ///
-/// Win+D / 「显示桌面」会最小化所有顶层窗口 —— 停靠窗也在其中。桌面层 `SetParent`
-/// 能躲掉它，代价是交互全废（见 [`create_or_show_workstation_dock`] 文档）。
-/// 所以这里改成轻量看守：每 250ms 问一次 `IsIconic`，发现被最小化就立刻
-/// 无焦点还原 —— 视觉上「显示桌面后工作台仍留在桌面上」，而鼠标交互完全正常。
+/// Win+D / 「显示桌面」会让停靠窗消失：可能是被最小化（`IsIconic`），
+/// 也可能是被直接隐藏（`IsWindowVisible == false`，Win11 对不可最小化窗口的常见做法）。
+/// 这里每 120ms 用 raw Win32 问一次真实状态，一旦「意图可见却不可见」就无焦点还原，
+/// 视觉上「显示桌面后工作台仍留在桌面上」，而鼠标交互完全正常。
 ///
-/// 用户主动隐藏窗口（`hide()`）时窗口不是最小化态，看守不会把它弹回来；
+/// 用户主动隐藏（关闭钮 / 命令）会先把 `DOCK_WANTED` 置 false，看守不会把它弹回来；
 /// 窗口被销毁（`get_webview_window` 返回 None）时线程自行退出。
 #[cfg(target_os = "windows")]
 fn watch_dock_minimize(app: AppHandle) {
-    /// 轮询间隔：比「显示桌面」的动画（约 250ms 完成）略短，肉眼几乎无感
-    const POLL: std::time::Duration = std::time::Duration::from_millis(250);
+    use std::sync::atomic::Ordering;
 
+    /// 轮询间隔：比「显示桌面」动画（约 250ms）短，肉眼几乎看不出中断
+    const POLL: std::time::Duration = std::time::Duration::from_millis(120);
+
+    if DOCK_WATCHER_RUNNING.swap(true, Ordering::SeqCst) {
+        return;
+    }
     std::thread::spawn(move || loop {
         std::thread::sleep(POLL);
         let Some(win) = app.get_webview_window(WORKSTATION_LABEL) else {
+            DOCK_WATCHER_RUNNING.store(false, Ordering::SeqCst);
             return;
         };
-        if !win.is_minimized().unwrap_or(false) {
+        if !DOCK_WANTED.load(Ordering::SeqCst) {
             continue;
         }
-        restore_dock_without_focus(&win);
+        restore_dock_if_hidden(&win);
     });
 }
 
 /// 隐藏工作台停靠窗（窗口保留，恢复零开销；本就不存在时为幂等空操作）。
 pub fn hide_workstation_dock(app: &AppHandle) -> Result<(), String> {
+    // V82：先撤「意图」，否则看守线程会在 120ms 内把它重新弹出来
+    #[cfg(target_os = "windows")]
+    set_dock_wanted(false);
     if let Some(win) = app.get_webview_window(WORKSTATION_LABEL) {
         win.hide().map_err(|err| format!("隐藏工作台停靠窗失败：{err}"))?;
     }
@@ -362,6 +409,8 @@ pub fn attach_workstation_dock_close_to_hide(app: &AppHandle) {
     win.on_window_event(move |event| {
         if let tauri::WindowEvent::CloseRequested { api, .. } = event {
             api.prevent_close();
+            #[cfg(target_os = "windows")]
+            set_dock_wanted(false);
             let _ = handle.hide();
         }
     });

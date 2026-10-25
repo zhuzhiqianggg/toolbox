@@ -567,8 +567,11 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
     // dock 模式：不拉伸高度（块级嵌在日历下方），其余结构一致。
     <aside
       className={cn(
-        'relative flex shrink-0 flex-col items-center gap-1.5 rounded-2xl border border-border bg-card shadow-panel',
-        dock ? 'w-full py-2' : 'h-full self-stretch py-3',
+        'relative flex shrink-0 flex-col items-center gap-1.5 rounded-2xl border',
+        // dock 模式与两块面板同一套玻璃语言（V82）：半透明 + 去阴影
+        dock
+          ? 'w-full border-border/40 bg-card/60 py-2 shadow-none'
+          : 'h-full self-stretch border-border bg-card py-3 shadow-panel',
       )}
     >
       {/* —— 图标区：主窗=按高度自适应分列 + 溢出滚动；dock=6 列等宽网格平铺
