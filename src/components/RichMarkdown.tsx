@@ -1347,49 +1347,60 @@ export function RichMarkdown({
     // 是默认箭头、点下去也不落光标（用户 09-21：「便签整个内容区域鼠标应该都变成光标
     // 形状，而不是只有顶部一行才能变成光标输入形状」）。改成 flex 列、内层 `flex-1`
     // 之后，父容器给了高度的地方编辑区就撑满（便签纸），没给的地方仍按内容走。
-    <div className={cn('relative flex min-h-0 flex-col', className)}>
-      <div
-        ref={rootRef}
-        role="textbox"
-        aria-multiline={!singleLine}
-        aria-label={ariaLabel}
-        tabIndex={readOnly ? -1 : 0}
-        contentEditable={!readOnly}
-        suppressContentEditableWarning
-        onInput={handleInput}
-        onKeyDown={handleKeyDown}
-        onPaste={handlePaste}
-        onFocus={() => onFocus?.()}
-        onBlur={() => {
-          // 失焦即把待补的高亮补上（省得离开后代码还是黑的）
-          if (highlightTimerRef.current !== undefined) {
-            window.clearTimeout(highlightTimerRef.current);
-            highlightTimerRef.current = undefined;
-          }
-          applyHighlight();
-          emit();
-          onBlur?.();
-        }}
-        className={cn(
-          // `h-full` 在父容器高度为 auto 时自然退化为 auto（内容撑开），
-          // 父容器有确定高度（如笔记正文）时则撑满并自行滚动 —— 一套样式两种场景通吃。
-          // V64：`flex-1` 让它跟着 flex 列父容器撑满（同一豆腐块的每个角落都是 I-beam）；
-          // 保留 `h-full` 是为了那些父容器**不是** flex、但给了确定高度的场合
-          // （`NotesPanel` 的 `h-full`、`NoteWindow` 的 `flex-1`）—— 两条路取其一，谁生效都行。
-          // `cursor-text`：即使光标下面没有文字（空行 / 大片留白）也显示工字光标。
-          'md-preview wysiwyg scrollbar-thin h-full min-h-0 flex-1 cursor-text overflow-auto outline-none',
-          readOnly && 'pointer-events-none',
+    <div className={cn('flex min-h-0 flex-col', className)}>
+      {/* V75：内层 `relative` 是占位符的定位上下文。外层 className 带着
+          `px-2.5 py-1.5` 之类的内边距，若把 `absolute` 挂在外层（边框盒），
+          占位符会忽略内边距、直接贴到边框上并向右溢出。放在这一层，起点
+          就是正文文本起点，占位符和真实文字完全对齐。 */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={rootRef}
+          role="textbox"
+          aria-multiline={!singleLine}
+          aria-label={ariaLabel}
+          tabIndex={readOnly ? -1 : 0}
+          contentEditable={!readOnly}
+          suppressContentEditableWarning
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
+          onFocus={() => onFocus?.()}
+          onBlur={() => {
+            // 失焦即把待补的高亮补上（省得离开后代码还是黑的）
+            if (highlightTimerRef.current !== undefined) {
+              window.clearTimeout(highlightTimerRef.current);
+              highlightTimerRef.current = undefined;
+            }
+            applyHighlight();
+            emit();
+            onBlur?.();
+          }}
+          className={cn(
+            // `h-full` 在父容器高度为 auto 时自然退化为 auto（内容撑开），
+            // 父容器有确定高度（如笔记正文）时则撑满并自行滚动 —— 一套样式两种场景通吃。
+            // V64：`flex-1` 让它跟着 flex 列父容器撑满（同一豆腐块的每个角落都是 I-beam）；
+            // 保留 `h-full` 是为了那些父容器**不是** flex、但给了确定高度的场合
+            // （`NotesPanel` 的 `h-full`、`NoteWindow` 的 `flex-1`）—— 两条路取其一，谁生效都行。
+            // `cursor-text`：即使光标下面没有文字（空行 / 大片留白）也显示工字光标。
+            'md-preview wysiwyg scrollbar-thin h-full min-h-0 flex-1 cursor-text overflow-auto outline-none',
+            readOnly && 'pointer-events-none',
+          )}
+        />
+        {empty && placeholder !== '' && (
+          // V75：占位符**不再复用外层 className**。那个 className 里含边框 / 圆角 /
+          // 内边距 / 高度，套到占位符上会画出第二层框；而且字号类落在外层包装上时，
+          // 这个 span 拿不到，直接回落到 16px 根字号，比 12px 正文大一圈。
+          // 现在只靠继承：外层（如 `.md-compact`）给什么字号，占位符就是什么字号。
+          <span
+            className={cn(
+              'pointer-events-none absolute inset-x-0 top-0 select-none text-muted-foreground/60',
+              singleLine && 'truncate',
+            )}
+          >
+            {placeholder}
+          </span>
         )}
-      />
-      {empty && placeholder !== '' && (
-        // V75：占位符**不再复用外层 className**。那个 className 里含边框 / 圆角 /
-        // 内边距 / 高度，套到占位符上会画出第二层框；而且字号类落在外层包装上时，
-        // 这个 span 拿不到，直接回落到 16px 根字号，比 12px 正文大一圈。
-        // 现在只靠继承：外层（如 `.md-compact`）给什么字号，占位符就是什么字号。
-        <span className="pointer-events-none absolute left-0 top-0 w-full select-none text-muted-foreground/50">
-          {placeholder}
-        </span>
-      )}
+      </div>
     </div>
   );
 }
