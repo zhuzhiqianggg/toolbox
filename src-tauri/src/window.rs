@@ -3,28 +3,20 @@
 //! 本批（V08）覆盖：主面板显隐/聚焦、close-to-tray、便签多实例窗（`note-{id}`）。
 //! 设置窗（V13）/ 桌面整理预览窗（V12）后续扩展。
 
-use std::sync::atomic::{AtomicBool, Ordering};
-
+use tauri::utils::config::WindowEffectsConfig;
+use tauri::window::Effect;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 use tauri_plugin_store::StoreExt;
 
 /// 主窗口 label（与 tauri.conf.json 中 app.windows[0].label 一致）
 pub const MAIN_LABEL: &str = "main";
 
-/// 主窗口「被唤出显示」事件（前端 `useHotkeyOpen` 监听：切回面板 + 聚焦搜索框）。
+/// 主窗口「被唤出显示」事件（前端 `useHotkeyOpen` 监听）。
 ///
-/// 载荷（V64）区分**上次是怎么被藏起来的**：
-/// - `"palette"`：呼出键 / 托盘打开 —— 启动器语义，前端切回命令面板并聚焦搜索框；
-/// - `"resume"`：上次是用户主动关闭（点关闭钮 / Alt+F4）—— 回原页面保持上下文。
+/// 载荷恒为 `"resume"`（V65 用户口径）：**无论上次是怎么被藏起来的**，呼出都回到
+/// 原页面 —— 工具状态（含密码库解锁态）跨呼出保留，只有用户在工具内按 `Esc`
+/// 主动回到命令面板，下次呼出才停在面板。
 pub const MAIN_SHOWN_EVENT: &str = "toolbox://main-shown";
-
-/// 主窗口上次被隐藏的方式是否为「用户主动关闭」（V64）。
-///
-/// - `CloseRequested`（点关闭钮 / Alt+F4）→ `true`：用户在「收起当前工作」，
-///   下次呼出回到原页面，不打断上下文；
-/// - 呼出键 / 托盘切换触发的 `hide()` → `false`：这是「启动器循环」，
-///   下次呼出回到命令面板聚焦搜索框（Spotlight 语义，行为完全可预期）。
-static MAIN_CLOSED_BY_USER: AtomicBool = AtomicBool::new(false);
 
 /// 取得主窗口句柄。
 fn main_window(app: &AppHandle) -> Result<WebviewWindow, String> {
@@ -58,18 +50,14 @@ pub fn show_main_palette(app: &AppHandle) -> Result<(), String> {
     // 的几何持久化），解决「每次呼出位置都不一样」的不一致感。首次启动仍由
     // tauri.conf `center: true` 居中；越界恢复（换屏 / 拔显示器）由前端启动装配 clamp。
     win.set_focus().map_err(|e| format!("聚焦主窗口失败：{e}"))?;
-    // 广播「唤出显示」并带上**关闭来源**（隐藏路径不发）：前端据此决定
-    // 回命令面板（启动器语义）还是保持原页面（主动关闭后的上下文恢复）。
-    let resume = MAIN_CLOSED_BY_USER.swap(false, Ordering::SeqCst);
-    let _ = app.emit(MAIN_SHOWN_EVENT, if resume { "resume" } else { "palette" });
+    // 广播「唤出显示」（隐藏路径不发）：V65 起语义恒为 resume（回原页面保持上下文）
+    let _ = app.emit(MAIN_SHOWN_EVENT, "resume");
     Ok(())
 }
 
 /// 隐藏主面板（不退出应用，常驻托盘）。
 pub fn hide_main_palette(app: &AppHandle) -> Result<(), String> {
     let win = main_window(app)?;
-    // 呼出键 / 托盘的隐藏 = 启动器循环，下一次呼出走「回命令面板」分支
-    MAIN_CLOSED_BY_USER.store(false, Ordering::SeqCst);
     win.hide().map_err(|e| format!("隐藏主窗口失败：{e}"))
 }
 
@@ -113,8 +101,6 @@ pub fn attach_close_to_tray(app: &AppHandle) {
     let handle = win.clone();
     win.on_window_event(move |event| {
         if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-            // 标记「用户主动关闭」：下次呼出走 resume 分支（回原页面保持上下文）
-            MAIN_CLOSED_BY_USER.store(true, Ordering::SeqCst);
             // 阻止默认关闭（默认会销毁窗口并可能触发应用退出）。
             api.prevent_close();
             // 隐藏到托盘，应用保持常驻（不退出）。
@@ -209,8 +195,6 @@ const DOCK_DEFAULT_W: f64 = 360.0;
 /// 停靠窗最小尺寸（逻辑像素），与前端紧凑布局的下限对齐。
 const DOCK_MIN_W: f64 = 280.0;
 const DOCK_MIN_H: f64 = 420.0;
-/// 停靠窗与屏幕右缘 / 顶部的留白（逻辑像素）。
-const DOCK_MARGIN: f64 = 8.0;
 
 /// 读取 `settings.json` → `settings` 对象（缺失时返回空对象）。
 ///
@@ -226,7 +210,8 @@ fn read_settings_map(app: &AppHandle) -> serde_json::Map<String, serde_json::Val
     }
 }
 
-/// 计算停靠窗默认几何：主显示器工作区右缘贴边、高度占满、宽度取 [`DOCK_DEFAULT_W`]。
+/// 计算停靠窗默认几何：主显示器工作区**右缘 / 上下严丝合缝**（V65 用户要求，
+/// 去 V64 的 8px 留白）：右缘贴边、顶到工作区顶、高度占满工作区（不盖任务栏）。
 ///
 /// 拿不到显示器信息时退化为 `(0, 0, DOCK_DEFAULT_W, 600)` 兜底（开窗不因探测失败而中断）。
 fn default_dock_geometry(app: &AppHandle) -> (f64, f64, f64, f64) {
@@ -241,15 +226,17 @@ fn default_dock_geometry(app: &AppHandle) -> (f64, f64, f64, f64) {
     let y = work.position.y as f64 / scale;
     let w = work.size.width as f64 / scale;
     let h = work.size.height as f64 / scale;
-    (x + w - DOCK_DEFAULT_W - DOCK_MARGIN, y + DOCK_MARGIN, DOCK_DEFAULT_W, h - DOCK_MARGIN * 2.0)
+    (x + w - DOCK_DEFAULT_W, y, DOCK_DEFAULT_W, h)
 }
 
 /// 创建（或显示已存在的）工作台停靠窗。
 ///
-/// - 无边框 + 置顶 + 不进任务栏 + **不抢焦点**（`focused(false)`）：常驻桌面右缘的
-///   「盯住」窗，出现时不打断用户正在输入的任何窗口；
+/// - **透明 + Acrylic 亚克力材质 + 无阴影**（V65：让窗口「长在桌面上」而非浮块）：
+///   桌面壁纸透过磨砂底色若隐若现，随系统深浅色主题变化；
+/// - 置顶 + 不进任务栏 + **不抢焦点**（`focused(false)`）：常驻「盯住」窗，
+///   出现时不打断用户正在输入的任何窗口；
 /// - 几何：`settings.workstationDockGeometry`（前端拖动 / 缩放后落盘）优先，
-///   首次使用取主显示器右缘贴边、占满工作区高度的默认值；
+///   首次使用取主显示器右缘贴边、上下严丝合缝的默认值；
 /// - 已存在同 label 窗口 → 仅显示（不重复聚焦，避免打断）。
 pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     if let Some(existing) = app.get_webview_window(WORKSTATION_LABEL) {
@@ -257,7 +244,7 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    // 几何：settings 优先（逻辑像素），缺省用「右缘贴边、占满工作区高」默认值
+    // 几何：settings 优先（逻辑像素），缺省用「右缘贴边、上下严丝合缝」默认值
     let stored = read_settings_map(app)
         .get("workstationDockGeometry")
         .cloned()
@@ -271,12 +258,21 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     )
     .title("工作台 · Toolbox")
     .decorations(false)
+    .transparent(true)
+    .shadow(false)
     .resizable(true)
     .maximizable(false)
     .minimizable(false)
     .always_on_top(true)
     .focused(false)
     .skip_taskbar(true)
+    .effects(WindowEffectsConfig {
+        // Acrylic（Win10+）：磨砂透明底，桌面质感；不支持时系统回退为实色，不影响可用性
+        effects: vec![Effect::Acrylic],
+        state: None,
+        radius: None,
+        color: None,
+    })
     .inner_size(w.max(DOCK_MIN_W), h.max(DOCK_MIN_H))
     .min_inner_size(DOCK_MIN_W, DOCK_MIN_H)
     .position(x, y)
