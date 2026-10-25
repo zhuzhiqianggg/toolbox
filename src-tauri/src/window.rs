@@ -192,10 +192,10 @@ pub const WORKSTATION_LABEL: &str = "workstation";
 
 /// 停靠窗默认宽度（逻辑像素）：V67 双列布局（左日历 / 右计划，计划一眼可见），
 /// 高度占满工作区。旧单列 360 已废弃 —— 存量过窄几何开窗时自动放宽（见下）。
-const DOCK_DEFAULT_W: f64 = 680.0;
+const DOCK_DEFAULT_W: f64 = 760.0;
 /// 双列布局的判定宽度：存量几何低于此值视为旧单列宽，开窗时提升为默认宽
 /// （保持用户已存的右缘位置对齐，向左扩宽）。
-const DOCK_TWO_COL_MIN_W: f64 = 620.0;
+const DOCK_TWO_COL_MIN_W: f64 = 700.0;
 /// 停靠窗最小尺寸（逻辑像素）：窄于此走前端单列布局。
 const DOCK_MIN_W: f64 = 320.0;
 const DOCK_MIN_H: f64 = 420.0;
@@ -245,6 +245,17 @@ fn default_dock_geometry(app: &AppHandle) -> (f64, f64, f64, f64) {
 pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     if let Some(existing) = app.get_webview_window(WORKSTATION_LABEL) {
         let _ = existing.show();
+        // V78：隐藏后再显示时 shell 可能已经重置父窗（Explorer 重启、切换「显示桌面」），
+        // 这里补一次挂载 —— 幂等且成本极低。
+        #[cfg(target_os = "windows")]
+        if let Ok(hwnd) = existing.hwnd() {
+            let raw = hwnd.0 as usize;
+            std::thread::spawn(move || {
+                pin_workstation_to_desktop(windows::Win32::Foundation::HWND(
+                    raw as *mut core::ffi::c_void,
+                ));
+            });
+        }
         return Ok(());
     }
 
@@ -332,7 +343,9 @@ fn pin_workstation_to_desktop(hwnd: windows::Win32::Foundation::HWND) {
     use windows::core::w;
     use windows::Win32::Foundation::{LPARAM, WPARAM};
     use windows::Win32::UI::WindowsAndMessaging::{
-        FindWindowExW, FindWindowW, GetParent, SendMessageW, SetParent,
+        FindWindowExW, FindWindowW, GetParent, SendMessageW, SetParent, SetWindowPos,
+        ShowWindow, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOZORDER, SWP_NOSIZE,
+        SW_SHOWNA,
     };
 
     /// 轮询次数与间隔（约 6s：覆盖 Explorer 冷启动的常见窗口期）
@@ -348,38 +361,68 @@ fn pin_workstation_to_desktop(hwnd: windows::Win32::Foundation::HWND) {
         }
     };
     unsafe {
-        // 2) 幂等触发：shell 收到 0x052C 后异步生成 WorkerW（仅首次生效）
+        // 2) 触发 shell 生成壁纸层 WorkerW。实测部分机器一次不生效（shell 会
+        //    忽略第二次），多发一次是无害的幂等操作。
+        SendMessageW(progman, 0x052C, WPARAM(0), LPARAM(0));
         SendMessageW(progman, 0x052C, WPARAM(0), LPARAM(0));
     }
-    // 3) 图标层 SHELLDLL_DefView 通常挂在 Progman 直属；目标父窗 = 它之后的第一个
-    //    兄弟 WorkerW。WorkerW 创建是异步的 —— 轮询直到出现或超时。
-    let mut worker = None;
+
+    /*
+     * V78 修「显示桌面时工作台跟着消失」：
+     *
+     * 旧实现按「DefView 是 Progman 的子窗」去找（Win7 口径），Win11 上 DefView
+     * 其实挂在某个**顶层 WorkerW** 里，于是找不到 → 退化成普通顶层窗口 →
+     * Win+D 一按就被最小化。现在按经典写法遍历顶层 WorkerW：
+     *   ① 找到「内部含 SHELLDLL_DefView」的 WorkerW（图标层）；
+     *   ② 取它**之后**的兄弟 WorkerW = 壁纸层 —— 把窗口挂到这里，
+     *      才真正属于桌面（壁纸之上、图标之下），Win+D 不会摘掉它。
+     */
+    let mut target: Option<windows::Win32::Foundation::HWND> = None;
     for attempt in 0..RETRIES {
-        // （windows 0.58 的 Param 只认 Option<&HWND> 借用形态，owned Option 不过 bound）
-        let defview = unsafe { FindWindowExW(progman, None, w!("SHELLDLL_DefView"), None).ok() };
-        match unsafe { FindWindowExW(None, defview.as_ref(), w!("WorkerW"), None) } {
-            Ok(found) => {
-                worker = Some(found);
+        // 遍历顶层 WorkerW 链
+        let mut current = unsafe { FindWindowExW(None, None, w!("WorkerW"), None).ok() };
+        while let Some(worker) = current {
+            let has_defview =
+                unsafe { FindWindowExW(worker, None, w!("SHELLDLL_DefView"), None) }.is_ok();
+            if has_defview {
+                // 壁纸层 = 图标层之后的同级 WorkerW；个别精简 shell 没有这一层，
+                // 那就退回图标层本身（仍在桌面树里，Win+D 同样不会被最小化）
+                target = unsafe { FindWindowExW(None, Some(&worker), w!("WorkerW"), None) }
+                    .ok()
+                    .or(Some(worker));
                 break;
             }
-            Err(_) => {
-                if attempt + 1 == RETRIES {
-                    eprintln!(
-                        "[Toolbox] 等待桌面 WorkerW 超时（{RETRIES} 次 x {RETRY_INTERVAL_MS}ms，保持普通窗口形态）"
-                    );
-                    return;
-                }
-                std::thread::sleep(std::time::Duration::from_millis(RETRY_INTERVAL_MS));
-            }
+            current = unsafe { FindWindowExW(None, Some(&worker), w!("WorkerW"), None) }.ok();
         }
+        if target.is_some() {
+            break;
+        }
+        if attempt + 1 == RETRIES {
+            // 兜底：直接挂到 Progman 下 —— 仍是桌面子窗，Win+D 不会最小化
+            eprintln!("[Toolbox] 未找到桌面 WorkerW，降级挂到 Progman");
+            target = Some(progman);
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(RETRY_INTERVAL_MS));
     }
-    let Some(worker) = worker else {
+
+    let Some(parent) = target else {
         return;
     };
     unsafe {
-        // 4) 挂过去（壁纸之上、图标之下、一切普通窗口之下）并验证
-        let _ = SetParent(hwnd, worker);
-        if GetParent(hwnd).unwrap_or_default() != worker {
+        let _ = SetParent(hwnd, parent);
+        // 跨进程改父后补一次 frame 变更 + 以「不激活」方式显示，确保 shell 真的认领
+        let _ = SetWindowPos(
+            hwnd,
+            None,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
+        );
+        let _ = ShowWindow(hwnd, SW_SHOWNA);
+        if GetParent(hwnd).unwrap_or_default() != parent {
             eprintln!("[Toolbox] 停靠窗挂载桌面层后 GetParent 校验不符（可能被 shell 重置）");
         }
     }

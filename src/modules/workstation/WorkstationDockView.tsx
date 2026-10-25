@@ -84,14 +84,17 @@ export function WorkstationDockView(): React.JSX.Element {
     return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]}`;
   }, [now]);
 
-  // —— 双列布局判定（V67）：宽 ≥560 左计划 / 右日历，窄窗回落单列 ——
+  // —— 双列布局判定（V78）：宽 ≥660 左计划 / 右日历，窄窗回落单列 ——
+  // V77 及以前阈值是 560，而右列固定 332 —— 620~700 宽时左列只剩 200 出头，
+  // 待办标题被挤成一列字、日历格子也缩水，用户直说「布局很烂」。阈值抬到 660，
+  // 并且右列从 332 收到 320，默认窗宽同时由 680 放宽到 760（Rust DOCK_DEFAULT_W）。
   const [windowW, setWindowW] = useState<number>(() => window.innerWidth);
   useEffect(() => {
     const onResize = (): void => setWindowW(window.innerWidth);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-  const twoCol = windowW >= 560;
+  const twoCol = windowW >= 660;
   const lunarLabel = useMemo(() => {
     const d = new Date(now);
     const info = dayInfo(d.getFullYear(), d.getMonth() + 1, d.getDate());
@@ -194,13 +197,15 @@ export function WorkstationDockView(): React.JSX.Element {
         data-tauri-drag-region
         className="relative flex shrink-0 select-none items-center justify-between gap-3 px-3.5 pb-2.5 pt-3"
       >
-        <div data-tauri-drag-region className="flex items-baseline gap-0.5">
+        <div data-tauri-drag-region className="flex items-baseline">
           <span
             data-tauri-drag-region
             className="tabular-nums text-[27px] font-semibold leading-none tracking-tight text-foreground"
           >
             {clock.hhmm}
           </span>
+          {/* 冒号跟着秒一起缩小、且**不留 gap** —— V77 用了 gap-0.5，渲染成「21:02 :49」，
+              读起来像两个独立的数；现在紧贴分位，视觉上是一个 21:02:49 的整体 */}
           <span
             data-tauri-drag-region
             className="tabular-nums text-[13px] font-medium leading-none text-muted-foreground/70"
@@ -244,7 +249,7 @@ export function WorkstationDockView(): React.JSX.Element {
               focusToken={focusToken}
             />
           </div>
-          <div className="flex min-h-0 w-[332px] shrink-0 flex-col gap-2 border-l border-border/60 pl-3">
+          <div className="flex min-h-0 w-[320px] shrink-0 flex-col gap-2 border-l border-border/60 pl-3">
             <div className="flex min-h-0 flex-1 flex-col">
               <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
             </div>

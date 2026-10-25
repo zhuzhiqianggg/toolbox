@@ -60,13 +60,32 @@ export function DateInput({
   const yearRef = useRef<HTMLInputElement>(null);
   const monthRef = useRef<HTMLInputElement>(null);
   const dayRef = useRef<HTMLInputElement>(null);
+  /** 三段的「最新」快照：effect 里不能读闭包旧值，否则回声判断永远失败 */
+  const segRef = useRef({ y: initial.y, m: initial.m, d: initial.d });
+  segRef.current = { y: year, m: month, d: day };
 
   // 外部值变化（如「用今天」）同步进三段；空串不覆盖，避免打断正在输入的用户
   useEffect(() => {
     if (value === '') {
       return;
     }
+    /*
+     * V78 关键修复：**回声不要回写**。
+     *
+     * `emit()` 会把 `1990-5-2` 补零成 `1990-05-02` 交给父级，父级再作为 `value`
+     * 传回来；effect 若无条件 `setDay('02')`，「日」段就被提前补成两位 ——
+     * 用户接着打 `7` 得到 `027`，再被 slice(0,2) 截成 `02`，于是「输 27 变 02、
+     * 7 根本打不进去」。这里按**数值**比较（`2` == `02`）识别回声并跳过。
+     */
+    const seg = segRef.current;
     const next = splitValue(value);
+    if (
+      Number(next.y) === Number(seg.y) &&
+      Number(next.m) === Number(seg.m) &&
+      Number(next.d) === Number(seg.d)
+    ) {
+      return;
+    }
     setYear(next.y);
     setMonth(next.m);
     setDay(next.d);

@@ -176,7 +176,7 @@ export function PlanPanel({
   );
 
   return (
-    <section className="flex h-full min-h-[260px] flex-col gap-3 overflow-hidden rounded-xl border border-border bg-card p-4 shadow-panel lg:min-h-0">
+    <section className="flex h-full min-h-[260px] flex-col gap-2.5 overflow-hidden rounded-xl border border-border bg-card p-3 shadow-panel lg:min-h-0">
       <header className="flex shrink-0 items-center gap-2">
         {/* 与日历面板同一套「柔色底 + 同色字」图标块语言，两块面板并排才不打架
             （V75：原来是 emerald-100 实底，和日历的 brand-muted 轻重不一致） */}
@@ -207,18 +207,19 @@ export function PlanPanel({
         </button>
       </header>
 
-      {/* 范围切换 */}
-      <div className="flex shrink-0 flex-wrap items-center gap-1">
+      {/* 范围切换：改成**分段控件**（浅槽 + 品牌色滑块），与纪念日表单里的
+          「类型 / 历法」同一套语言 —— 之前是几个散着的文字按钮，看不出是「一组」 */}
+      <div className="flex shrink-0 items-center gap-0.5 rounded-lg bg-muted/45 p-0.5">
         {SCOPE_ORDER.map((item) => (
           <button
             key={item}
             type="button"
             onClick={() => onScopeChange(item)}
             className={cn(
-              'rounded-md px-2 py-1 text-xs transition',
+              'flex-1 rounded-[6px] px-1.5 py-1 text-[11px] transition',
               scope === item
-                ? 'bg-brand-muted font-medium text-brand'
-                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                ? 'bg-background font-medium text-brand shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {item === 'day' ? relativeDayLabel(anchorMs) : SCOPE_LABELS[item]}
@@ -249,7 +250,7 @@ export function PlanPanel({
       </div>
 
       {/* 列表 */}
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-0.5">
+      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5">
         {visible.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border py-10 text-center">
             <ListTodo className="h-6 w-6 text-muted-foreground/40" />
@@ -322,14 +323,15 @@ function TodoRow({
   return (
     <div
       className={cn(
-        // V75 统一行卡片：未完成=可点浅卡、已完成=更低对比的灰底、展开=品牌色聚焦。
-        // 三态共用同一套圆角/边框/内边距，保证并排时「同族不同态」而不是三种风格。
-        'rounded-lg border transition',
+        // V78 列表化：原来每条都是一个带边框的小卡片，十条待办就像十个补丁贴在面板上，
+        // 用户直评「待办很丑」。改成**无边条目的列表**：靠 1px 分隔线 + 悬停整行高亮，
+        // 展开态才上品牌色底，让「列表」读起来是一页清单而不是一堆卡片。
+        'border-b border-border/45 transition last:border-b-0',
         expanded
-          ? 'border-brand/40 bg-brand-muted/15'
+          ? 'border-b-brand/25 bg-brand-muted/25'
           : todo.done
-            ? 'border-transparent bg-muted/25'
-            : 'border-border/70 bg-background/50 hover:border-brand/30 hover:bg-accent/30',
+            ? 'hover:bg-muted/30'
+            : 'hover:bg-accent/40',
       )}
     >
       {/* 摘要行：点任意位置都能展开（用户反馈「必须点前面圆圈才行」） */}
@@ -391,7 +393,7 @@ function TodoRow({
             编辑中
           </span>
         ) : (
-          <div className="min-w-0 flex-1 text-xs leading-snug">
+          <div className="min-w-0 flex-1 text-[13px] leading-snug">
             <MdText
               source={todo.title}
               inline
