@@ -182,20 +182,20 @@ export default function TodoView(_props: TodoViewProps = {}): React.JSX.Element 
 
   const handleConvertToNote = (todo: Todo): void => {
     void createNoteFromTodo(todo)
-      .then(() => toast.success('已转为笔记（可在工作台的笔记面板查看）'))
+      .then(() => toast.success('已转为笔记（可在便签页查看）'))
       .catch((err: unknown) => toast.error(`转为笔记失败：${err instanceof Error ? err.message : String(err)}`));
   };
 
   /**
-   * 「打开来源笔记」：V18 起**不再弹桌面悬浮便签窗**，改为切到工作台的笔记面板并定位到该条
-   * （对应用户反馈「不要便签了 —— 便签该放进工作台，不要悬浮到桌面」）。
+   * 「打开来源笔记」：V18 起不再弹桌面悬浮便签窗；V70 起切到侧栏「便签」页定位到该条
+   * （便签的完整编辑体验已从工作台面板收敛到便签页，见 NoteListView）。
    *
-   * 定位通过 `useNotesStore.requestFocus` 传递：待办与工作台同在主窗口、共用同一 store 实例，
+   * 定位通过 `useNotesStore.requestFocus` 传递：待办与便签页同在主窗口、共用同一 store 实例，
    * 所以不需要跨窗口 IPC 或额外路由参数。
    */
   const handleOpenSourceNote = (noteId: string): void => {
     useNotesStore.getState().requestFocus(noteId);
-    openModule('notes');
+    openModule('sticky');
   };
 
   const handleDelete = (id: string): void => {

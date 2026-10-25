@@ -15,7 +15,7 @@ import { notesCommands } from './commands';
 const notesModule = {
   id: 'notes',
   name: '工作台',
-  description: '日历计划 · 笔记 · 系统快捷入口，一屏聚合',
+  description: '日历计划 · 系统快捷入口，一屏聚合',
   icon: 'StickyNote',
   order: 20,
   surface: ['panel', 'window'],

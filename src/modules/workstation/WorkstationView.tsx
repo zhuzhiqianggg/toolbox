@@ -3,12 +3,10 @@ import { CalendarDays, Info, Pin } from 'lucide-react';
 import { isTauri } from '@/platform/detect';
 import { ipc } from '@/lib/ipc';
 import { useTodosStore } from '@/stores/useTodosStore';
-import { useNotesStore } from '@/stores/useNotesStore';
 import { dayInfo, ganZhi, type DayInfo } from '@/lib/lunar';
 import { holidayOf } from '@/lib/holidays';
 import { CalendarPanel } from './CalendarPanel';
 import { PlanPanel } from './PlanPanel';
-import { NotesPanel } from './NotesPanel';
 import { QuickActionsRail } from './QuickActionsRail';
 import {
   addDays,
@@ -24,7 +22,7 @@ import {
 /**
  * 工作台（路由 id 仍为 `notes`，便于零迁移）。
  *
- * # 布局（V21 按用户反馈再调）
+ * # 布局（V70 按用户反馈调整：便签从工作台摘除）
  *
  * ```
  * ┌────────────────────────────────────────────┬──────┐
@@ -32,16 +30,15 @@ import {
  * ├────────────────────────┬───────────────────┤ 入口 │
  * │  日历（农历/节气/休班） │  计划 · 任务列表   │ 图标 │
  * │  ← 两栏**真正等高**，撑满剩余高度           │ 栏   │
- * ├────────────────────────┴───────────────────┤      │
- * │  便签（固定高度 · 内部滚动）                 │      │
  * └────────────────────────────────────────────┴──────┘
  * ```
  *
- * 用户原话：「工作台上的日期和时间分到两边展示，而且时间没有显示秒，时间和系统时间
- * 不同步……日历里面最好可以添加农历、节假日等内容」「日历的显示最好和右边的计划任务
- * 对齐高度，或者有更加协调对称的布局方案」。
+ * 用户原话：「工作台和便签也存在重叠，我们不是有单独便签页面吗？而且便签功能感觉
+ * 编辑等都不方便」—— V70 起便签面板从工作台移除，与侧栏「便签」页的重叠就此消除；
+ * 便签的完整编辑体验（列表 + 边写边渲染 + 自动保存 + 贴桌面）统一收在
+ * `modules/notes/NoteListView`（侧栏「便签」，id `sticky`）。
  *
- * 数据说明：待办与便签**完全复用**既有 `useTodosStore` / `useNotesStore`（同一份 SQLite），
+ * 数据说明：待办**完全复用**既有 `useTodosStore`（同一份 SQLite），
  * 因此工作台与「待办清单」命令看到的是同一批数据，改动实时互通。
  */
 
@@ -135,13 +132,6 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
     void hydrateTodos();
   }, [hydrateTodos]);
 
-  // —— 便签（复用既有数据层，仅做加载与统计）——
-  const notes = useNotesStore((state) => state.notes);
-  const hydrateNotes = useNotesStore((state) => state.hydrate);
-  useEffect(() => {
-    void hydrateNotes();
-  }, [hydrateNotes]);
-
   // —— 日历 / 范围状态 ——
   const [anchorMs, setAnchorMs] = useState<number>(() => startOfDay(Date.now()));
   const [scope, setScope] = useState<PlanScope>('day');
@@ -179,8 +169,8 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
         }
       }
     }
-    return { todayCount, weekCount, monthCount, overdue, noteCount: notes.length };
-  }, [todos, notes.length]);
+    return { todayCount, weekCount, monthCount, overdue };
+  }, [todos]);
 
   const handleSelectDay = (dayMs: number): void => {
     setAnchorMs(startOfDay(dayMs));
@@ -219,7 +209,6 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
             {statChip('本周', overview.weekCount)}
             {statChip('本月', overview.monthCount)}
             {overview.overdue > 0 ? statChip('逾期', overview.overdue, 'warn') : null}
-            {statChip('便签', overview.noteCount)}
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
@@ -230,7 +219,7 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
               onClick={() => {
                 void ipc.workstationDockShow().catch(() => undefined);
               }}
-              title="钉到桌面右侧：常驻一块紧凑工作台（时钟 / 日历 / 计划 / 便签）"
+              title="钉到桌面右侧：常驻一块紧凑工作台（时钟 / 日历 / 计划）"
               className="flex h-7 items-center gap-1 rounded-md border border-border px-2 text-[11px] text-muted-foreground transition hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Pin className="h-3 w-3" />
@@ -264,13 +253,12 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
       {/* —— 主区：内容列 + 右侧快捷入口图标栏 —— */}
       <div className="flex min-h-0 flex-1 gap-4 px-6 pb-6">
         {/*
-          * 内容列**自身可滚动**：窗口够高时上排 flex-1 撑满（日历与计划保持等高），
-          * 窗口被压矮时上排退到 min-h 保底、由这一层出滚动条 ——
-          * 而不是让面板各自的 min-h 撑破格子、互相盖住（V22 修复用户截图里的重叠）。
+          * 内容列**自身可滚动**：窗口够高时日历/计划撑满（flex-1，V70 起不再被便签
+          * 面板分走 300px 高度），窗口被压矮时退到 min-h 保底、由这一层出滚动条。
           */}
-        <div className="scrollbar-thin flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+        <div className="scrollbar-thin flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto pr-1">
           {/*
-            * 上排：日历（左） | 计划（右）—— `lg` 起两栏并排且等高、一起撑满剩余高度。
+            * 日历（左） | 计划（右）—— `lg` 起两栏并排且等高、一起撑满剩余高度。
             *
             * ⚠️ V23：`flex-1` / `min-h-[440px]` 都**只在 `lg` 起生效**。
             * 窄窗口下这里是单栏，若还挂着 `flex-1`（`flex: 1 1 0%`），
@@ -278,7 +266,7 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
             * 于是「计划」面板被挤成 19px 高的空壳（V23 无头实测在 680px 复现）。
             * 单栏时一律按内容高度排布，滚动交给外层内容列。
             */}
-          <div className="grid grid-cols-1 gap-4 lg:min-h-[440px] lg:flex-1 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+          <div className="grid min-h-0 grid-cols-1 gap-4 lg:min-h-[440px] lg:flex-1 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
             <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
             <PlanPanel
               todos={todos}
@@ -289,12 +277,6 @@ export default function WorkstationView(_props: WorkstationViewProps = {}): Reac
               onHideDoneChange={setHideDone}
               focusToken={focusToken}
             />
-          </div>
-
-          {/* 下排：便签（固定高度，面板内部滚动，全屏时不会把上排挤走）
-              V23：窄窗口下这里更矮更窄，编辑器会被压得只剩两三行 —— 给窄屏多留 80px */}
-          <div className="h-[380px] shrink-0 lg:h-[300px]">
-            <NotesPanel />
           </div>
         </div>
 
