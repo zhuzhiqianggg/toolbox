@@ -3,7 +3,6 @@ import { ChevronDown, ListTodo, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
-import { MdText } from '@/components/MdText';
 import { RichMarkdown } from '@/components/RichMarkdown';
 import { stripMarkdown } from '@/lib/markdown';
 import { useTodosStore } from '@/stores/useTodosStore';
@@ -163,7 +162,6 @@ export function PlanPanel({
     <TodoRow
       key={todo.id}
       todo={todo}
-      anchorMs={anchorMs}
       showSchedule={showSchedule}
       expanded={expandedId === todo.id}
       onToggleExpand={() =>
@@ -285,10 +283,9 @@ export function PlanPanel({
   );
 }
 
-/** 单条待办：摘要行（整行可点） + 展开编辑区（名称 / 说明 / 优先级 / 日期） */
+/** 单条待办：正文行（整行可点） + 展开编辑区（正文 / 优先级 / 日期） */
 function TodoRow({
   todo,
-  anchorMs,
   showSchedule,
   expanded,
   onToggleExpand,
@@ -297,7 +294,6 @@ function TodoRow({
   onPatch,
 }: {
   todo: Todo;
-  anchorMs: number;
   /** 是否显示排期徽标（当日范围不显示，避免逐条重复「今天」） */
   showSchedule: boolean;
   expanded: boolean;
@@ -308,11 +304,28 @@ function TodoRow({
 }): React.JSX.Element {
   const priority = priorityStyle(todo.priority);
   /**
-   * 摘要剥掉 Markdown 记号后**整段**展示（V74：不再只取首行 —— 用户明确要
-   * 多行内容在收起态也能看到；超出两行由 line-clamp-2 截断）。
-   * 之前直接把 `**重点**` 原样显示，列表里全是星号，stripMarkdown 一并解决。
+   * 正文（V79）：**不再分「标题 / 说明」两级** —— 用户原话「待办就不需要标题了，
+   * 全部都是正文」。两段内容合并成一段纯文本，同字号、同颜色读下来，列表才像
+   * 一页清单；存储层不动（首行仍落 `title`、其余落 `detail`），主窗待办清单不受影响。
    */
-  const summary: string = useMemo(() => stripMarkdown(todo.detail).trim(), [todo.detail]);
+  const body: string = useMemo(() => {
+    const head = stripMarkdown(todo.title).trim();
+    const rest = stripMarkdown(todo.detail).trim();
+    return [head, rest].filter((part: string): boolean => part !== '').join('\n');
+  }, [todo.title, todo.detail]);
+
+  /** 编辑区同一口径的源文本（不剥 Markdown，保留用户原始写法） */
+  const bodySource: string = todo.detail.trim() === '' ? todo.title : `${todo.title}\n${todo.detail}`;
+  /** 写回：首行 → title，其余 → detail */
+  const onBodyChange = (next: string): void => {
+    const cut = next.indexOf('\n');
+    if (cut < 0) {
+      onPatch({ title: next, detail: '' });
+      return;
+    }
+    onPatch({ title: next.slice(0, cut), detail: next.slice(cut + 1) });
+  };
+
 
   /** 排期徽标（V77）：逾期 N 天 / 今天 / 明天 / 10月28日，不再显示无意义的「09:00」 */
   const schedule = scheduleLabel(todo);
@@ -346,10 +359,8 @@ function TodoRow({
           }
         }}
         className={cn(
-          // V75 密度分层：已完成只留一行标题（信息已收束），未完成标题 + 完整正文。
-          // 对齐方式跟着变：单行居中，多行正文顶部对齐（否则小圆圈会飘在正文中间）。
-          'group flex cursor-pointer gap-2.5 px-2.5',
-          summary !== '' && !todo.done && !expanded ? 'items-start py-1.5' : 'items-center py-1.5',
+          // V79：正文一律多行渲染，所以整行**顶部对齐**（小圆圈跟着首行基线，不再居中飘移）
+          'group flex cursor-pointer items-start gap-2.5 px-2.5 py-2',
         )}
       >
         <button
@@ -361,8 +372,7 @@ function TodoRow({
             onToggleDone();
           }}
           className={cn(
-            'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition',
-            summary !== '' && !todo.done && !expanded ? 'mt-[1px]' : '',
+            'mt-[2px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition',
             todo.done
               ? 'border-emerald-500 bg-emerald-500'
               : 'border-muted-foreground/40 hover:border-emerald-600',
@@ -383,36 +393,22 @@ function TodoRow({
         </button>
 
         {/*
-          * 标题区：展开时**不再重复画标题**（V77）——
-          * 之前摘要行给自己的标题、编辑器里又给「名称」输入框，同一个标题露两遍，
-          * 用户反馈「点击时不需要重复的两个标题」。展开后标题只在下方「名称」里编辑，
-          这一行退化成状态条（勾选框 + 排期 + 收起箭头）。
+          * 正文区（V79）：只有一个文本块 —— 合并后的「全文」，13px 统一正文色。
+          * 展开时不再重复渲染（编辑框里就是同一段文字），这一行退化为状态条。
           */}
         {expanded ? (
           <span className="min-w-0 flex-1 truncate text-[11px] leading-none text-muted-foreground/60">
             编辑中
           </span>
         ) : (
-          <div className="min-w-0 flex-1 text-[13px] leading-snug">
-            <MdText
-              source={todo.title}
-              inline
-              fallback="未命名"
-              className={cn(
-                todo.done
-                  ? '!text-muted-foreground line-through opacity-70'
-                  : '!text-foreground',
-              )}
-            />
-            {/* V75 信息密度（用户明确要求）：
-                · 已完成 → 只留标题一行，不再铺摘要（一屏能扫更多条）；
-                · 未完成 → 正文**完整展示**，不再 line-clamp 截断，一眼读得到计划内容。 */}
-            {summary !== '' && !todo.done && (
-              <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-muted-foreground/85">
-                {summary}
-              </p>
+          <p
+            className={cn(
+              'min-w-0 flex-1 whitespace-pre-line text-[13px] leading-relaxed',
+              todo.done ? 'text-muted-foreground line-through opacity-70' : 'text-foreground',
             )}
-          </div>
+          >
+            {body === '' ? '未命名' : body}
+          </p>
         )}
 
         {/* 优先级在前、时间在后：优先级是「要不要现在看」的信号，比时间更该先被扫到 */}
@@ -459,29 +455,16 @@ function TodoRow({
       {/* 展开编辑区 */}
       {expanded && (
         <div className="space-y-2 border-t border-brand/20 px-2.5 py-2">
-          {/* 任务名称 */}
+          {/* 正文（V79）：合并成一个输入框 —— 首行仍是「一句话主题」，换行继续写就是
+              原来的说明；不再给「名称 / 说明」两个标签，也不再有重复的标题。 */}
           <div>
-            <span className="mb-1 block text-[10px] text-muted-foreground">名称</span>
+            <span className="mb-1 block text-[10px] text-muted-foreground">正文</span>
             <RichMarkdown
-              value={todo.title}
-              onChange={(next: string) => onPatch({ title: next })}
-              placeholder="一句话说清要做什么"
-              singleLine
-              onEnter={onToggleExpand}
-              className="md-compact rounded-lg border border-border bg-background px-2.5 py-1"
-              ariaLabel="任务名称"
-            />
-          </div>
-
-          {/* 任务说明 */}
-          <div>
-            <span className="mb-1 block text-[10px] text-muted-foreground">说明 · Markdown</span>
-            <RichMarkdown
-              value={todo.detail}
-              onChange={(next: string) => onPatch({ detail: next })}
-              placeholder="补充步骤、链接、清单…"
-              className="md-compact min-h-[56px] rounded-lg border border-border bg-background px-2.5 py-1.5"
-              ariaLabel="任务说明"
+              value={bodySource}
+              onChange={onBodyChange}
+              placeholder="写下要做什么，换行继续补充细节…"
+              className="md-compact min-h-[64px] rounded-lg border border-border bg-background px-2.5 py-1.5"
+              ariaLabel="正文"
             />
           </div>
 
@@ -549,11 +532,6 @@ function TodoRow({
               </button>
             </div>
           </div>
-
-          {/* 锚点提示：让用户知道这条挂在哪一天 */}
-          <p className="text-[10px] leading-relaxed text-muted-foreground/70">
-            日历当前选中 {relativeDayLabel(anchorMs)}；改日期只影响本条，不动其它条目。
-          </p>
         </div>
       )}
     </div>

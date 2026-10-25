@@ -235,9 +235,10 @@ fn default_dock_geometry(app: &AppHandle) -> (f64, f64, f64, f64) {
 
 /// 创建（或显示已存在的）工作台停靠窗。
 ///
-/// - **桌面层挂件**（V68 用户口径）：不再置顶 —— 开窗后 `pin_to_desktop` 把窗口
-///   挂到 shell 的 WorkerW 层（壁纸之上、桌面图标之下），任何应用窗口都能盖住它，
-///   回到桌面才可见，真正「长在桌面上」；
+/// - **普通顶层窗口**（V79 回退）：V78 曾用经典 WorkerW 技巧把窗口 `SetParent` 到
+///   壁纸层（桌面图标之下），Win+D 确实不再摘掉它，但窗口也**彻底失去鼠标输入**
+///   （点击全被上层的桌面图标 ListView 吃掉，用户实测「快捷按钮点不动」）。
+///   现在回到普通顶层窗口（交互正常），用 [`watch_dock_minimize`] 轮询兜住 Win+D；
 /// - Mica 材质 + 无阴影 + 不进任务栏 + **不抢焦点**（`focused(false)`）；
 /// - 几何：`settings.workstationDockGeometry`（前端拖动 / 缩放后落盘）优先，
 ///   首次使用取主显示器右缘贴边、上下严丝合缝的默认值；
@@ -245,16 +246,10 @@ fn default_dock_geometry(app: &AppHandle) -> (f64, f64, f64, f64) {
 pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     if let Some(existing) = app.get_webview_window(WORKSTATION_LABEL) {
         let _ = existing.show();
-        // V78：隐藏后再显示时 shell 可能已经重置父窗（Explorer 重启、切换「显示桌面」），
-        // 这里补一次挂载 —— 幂等且成本极低。
         #[cfg(target_os = "windows")]
-        if let Ok(hwnd) = existing.hwnd() {
-            let raw = hwnd.0 as usize;
-            std::thread::spawn(move || {
-                pin_workstation_to_desktop(windows::Win32::Foundation::HWND(
-                    raw as *mut core::ffi::c_void,
-                ));
-            });
+        if existing.is_minimized().unwrap_or(false) {
+            // 上次被「显示桌面」压掉过：立刻还原（看守线程通常已处理，这里再兜一次）
+            restore_dock_without_focus(&existing);
         }
         return Ok(());
     }
@@ -299,133 +294,55 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     .position(x, y)
     .build()
     .map_err(|err| format!("创建工作台停靠窗失败：{err}"))?;
-    // 挂到桌面层（V68）：壁纸之上、图标之下，普通窗口之下 —— 属于桌面本身。
-    // WorkerW 由 shell 异步创建（尤其开机自启时 Explorer 可能还没就绪），
-    // 轮询重试放在后台线程做，绝不阻塞启动路径（V71）。
+    // V79：交互优先（不挂桌面层），用最小化看守兜住 Win+D —— 见函数文档
     #[cfg(target_os = "windows")]
-    {
-        let win = app.get_webview_window(WORKSTATION_LABEL);
-        if let Some(win) = win {
-            match win.hwnd() {
-                // tauri 依赖树里的 windows（0.61）与本项目直接依赖的 windows（0.58）
-                // 是两个不同 crate，HWND 类型不互通 —— 走裸指针跨过这条版本边界
-                Ok(hwnd) => {
-                    // HWND 内部是裸指针（非 Send），跨线程只传 usize，线程内重建
-                    let pinned_raw = hwnd.0 as usize;
-                    std::thread::spawn(move || {
-                        pin_workstation_to_desktop(windows::Win32::Foundation::HWND(
-                            pinned_raw as *mut core::ffi::c_void,
-                        ));
-                    });
-                }
-                Err(err) => eprintln!("[Toolbox] 停靠窗取 HWND 失败（保持普通窗口形态）：{err}"),
-            }
-        }
-    }
+    watch_dock_minimize(app.clone());
     // 关闭钮 → 隐藏（窗口常驻，恢复零开销；不销毁也就无需重建几何）
     attach_workstation_dock_close_to_hide(app);
     Ok(())
 }
 
-/// 将停靠窗挂到桌面层（V68 引入，V71 加固，仅 Windows）。
+/// 以「不抢焦点」的方式把停靠窗从最小化态还原（仅 Windows）。
 ///
-/// 经典 WorkerW 技巧：给桌面宿主 Progman 发 `0x052C` 消息，shell 会在壁纸与
-/// 图标层之间生成一个 WorkerW；再把我们的 HWND `SetParent` 过去 —— 窗口从此
-/// 属于桌面本身：回到桌面才可见、可交互，任何普通窗口都能盖住它，
-/// **Win+D 显示桌面也不会把它最小化**（它不再是顶层窗口，不受「最小化全部」影响）。
-///
-/// V71：`0x052C` 之后 WorkerW 由 shell **异步**创建（开机自启时 Explorer 甚至可能
-/// 还没就绪），V68 一次性查找失败就静默放弃 —— 窗口留在普通层，Win+D 一压就退到
-/// 后台（用户实测复现）。现在轮询重试最多 ~6s，并在挂载后用 `GetParent` 验证；
-/// 仍失败则打印日志降级为普通窗口形态（功能不受影响，只是层次回到普通窗口）。
+/// 不用 Tauri 的 `unminimize()`：它内部走 `ShowWindow(SW_RESTORE)`，而 `SW_RESTORE`
+/// **会激活窗口** —— 用户一按 Win+D，桌面上的焦点就被工作台抢走。`SW_SHOWNOACTIVATE`
+/// 同样能把最小化窗口还原到「最近一次的大小与位置」，但保持不激活。
 #[cfg(target_os = "windows")]
-fn pin_workstation_to_desktop(hwnd: windows::Win32::Foundation::HWND) {
-    use windows::core::w;
-    use windows::Win32::Foundation::{LPARAM, WPARAM};
-    use windows::Win32::UI::WindowsAndMessaging::{
-        FindWindowExW, FindWindowW, GetParent, SendMessageW, SetParent, SetWindowPos,
-        ShowWindow, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOZORDER, SWP_NOSIZE,
-        SW_SHOWNA,
-    };
+fn restore_dock_without_focus(win: &WebviewWindow) {
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_SHOWNOACTIVATE};
 
-    /// 轮询次数与间隔（约 6s：覆盖 Explorer 冷启动的常见窗口期）
-    const RETRIES: usize = 60;
-    const RETRY_INTERVAL_MS: u64 = 100;
+    if let Ok(hwnd) = win.hwnd() {
+        unsafe {
+            let _ = ShowWindow(HWND(hwnd.0 as *mut core::ffi::c_void), SW_SHOWNOACTIVATE);
+        }
+    }
+}
 
-    // 1) Progman = 桌面窗口宿主（没有它就没有后续，直接放弃）
-    let progman = match unsafe { FindWindowW(w!("Progman"), None) } {
-        Ok(progman) => progman,
-        Err(err) => {
-            eprintln!("[Toolbox] 未找到 Progman（保持普通窗口形态）：{err}");
+/// 停靠窗「桌面常驻」看守（V79，仅 Windows）。
+///
+/// Win+D / 「显示桌面」会最小化所有顶层窗口 —— 停靠窗也在其中。桌面层 `SetParent`
+/// 能躲掉它，代价是交互全废（见 [`create_or_show_workstation_dock`] 文档）。
+/// 所以这里改成轻量看守：每 250ms 问一次 `IsIconic`，发现被最小化就立刻
+/// 无焦点还原 —— 视觉上「显示桌面后工作台仍留在桌面上」，而鼠标交互完全正常。
+///
+/// 用户主动隐藏窗口（`hide()`）时窗口不是最小化态，看守不会把它弹回来；
+/// 窗口被销毁（`get_webview_window` 返回 None）时线程自行退出。
+#[cfg(target_os = "windows")]
+fn watch_dock_minimize(app: AppHandle) {
+    /// 轮询间隔：比「显示桌面」的动画（约 250ms 完成）略短，肉眼几乎无感
+    const POLL: std::time::Duration = std::time::Duration::from_millis(250);
+
+    std::thread::spawn(move || loop {
+        std::thread::sleep(POLL);
+        let Some(win) = app.get_webview_window(WORKSTATION_LABEL) else {
             return;
+        };
+        if !win.is_minimized().unwrap_or(false) {
+            continue;
         }
-    };
-    unsafe {
-        // 2) 触发 shell 生成壁纸层 WorkerW。实测部分机器一次不生效（shell 会
-        //    忽略第二次），多发一次是无害的幂等操作。
-        SendMessageW(progman, 0x052C, WPARAM(0), LPARAM(0));
-        SendMessageW(progman, 0x052C, WPARAM(0), LPARAM(0));
-    }
-
-    /*
-     * V78 修「显示桌面时工作台跟着消失」：
-     *
-     * 旧实现按「DefView 是 Progman 的子窗」去找（Win7 口径），Win11 上 DefView
-     * 其实挂在某个**顶层 WorkerW** 里，于是找不到 → 退化成普通顶层窗口 →
-     * Win+D 一按就被最小化。现在按经典写法遍历顶层 WorkerW：
-     *   ① 找到「内部含 SHELLDLL_DefView」的 WorkerW（图标层）；
-     *   ② 取它**之后**的兄弟 WorkerW = 壁纸层 —— 把窗口挂到这里，
-     *      才真正属于桌面（壁纸之上、图标之下），Win+D 不会摘掉它。
-     */
-    let mut target: Option<windows::Win32::Foundation::HWND> = None;
-    for attempt in 0..RETRIES {
-        // 遍历顶层 WorkerW 链
-        let mut current = unsafe { FindWindowExW(None, None, w!("WorkerW"), None).ok() };
-        while let Some(worker) = current {
-            let has_defview =
-                unsafe { FindWindowExW(worker, None, w!("SHELLDLL_DefView"), None) }.is_ok();
-            if has_defview {
-                // 壁纸层 = 图标层之后的同级 WorkerW；个别精简 shell 没有这一层，
-                // 那就退回图标层本身（仍在桌面树里，Win+D 同样不会被最小化）
-                target = unsafe { FindWindowExW(None, Some(&worker), w!("WorkerW"), None) }
-                    .ok()
-                    .or(Some(worker));
-                break;
-            }
-            current = unsafe { FindWindowExW(None, Some(&worker), w!("WorkerW"), None) }.ok();
-        }
-        if target.is_some() {
-            break;
-        }
-        if attempt + 1 == RETRIES {
-            // 兜底：直接挂到 Progman 下 —— 仍是桌面子窗，Win+D 不会最小化
-            eprintln!("[Toolbox] 未找到桌面 WorkerW，降级挂到 Progman");
-            target = Some(progman);
-            break;
-        }
-        std::thread::sleep(std::time::Duration::from_millis(RETRY_INTERVAL_MS));
-    }
-
-    let Some(parent) = target else {
-        return;
-    };
-    unsafe {
-        let _ = SetParent(hwnd, parent);
-        // 跨进程改父后补一次 frame 变更 + 以「不激活」方式显示，确保 shell 真的认领
-        let _ = SetWindowPos(
-            hwnd,
-            None,
-            0,
-            0,
-            0,
-            0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED,
-        );
-        let _ = ShowWindow(hwnd, SW_SHOWNA);
-        if GetParent(hwnd).unwrap_or_default() != parent {
-            eprintln!("[Toolbox] 停靠窗挂载桌面层后 GetParent 校验不符（可能被 shell 重置）");
-        }
-    }
+        restore_dock_without_focus(&win);
+    });
 }
 
 /// 隐藏工作台停靠窗（窗口保留，恢复零开销；本就不存在时为幂等空操作）。
