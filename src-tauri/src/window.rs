@@ -267,8 +267,9 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     .focused(false)
     .skip_taskbar(true)
     .effects(WindowEffectsConfig {
-        // Acrylic（Win10+）：磨砂透明底，桌面质感；不支持时系统回退为实色，不影响可用性
-        effects: vec![Effect::Acrylic],
+        // Mica（Win11）：壁纸淡染材质，**失焦不退化**（Acrylic 失焦会变实色白底，
+        // V66 实测正是如此）；Win10 自动回退为系统实色，不影响可用性
+        effects: vec![Effect::Mica],
         state: None,
         radius: None,
         color: None,
