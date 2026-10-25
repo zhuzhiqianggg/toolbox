@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ClipboardList, ShieldCheck, StickyNote, Wrench, X } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { CalendarDays, X } from 'lucide-react';
 import { useTodosStore } from '@/stores/useTodosStore';
 import { dayInfo, type DayInfo } from '@/lib/lunar';
 import { holidayOf } from '@/lib/holidays';
@@ -10,6 +9,7 @@ import { ipc } from '@/lib/ipc';
 import { Toaster } from '@/components/ui/toast';
 import { CalendarPanel } from './CalendarPanel';
 import { PlanPanel } from './PlanPanel';
+import { QuickActionsRail } from './QuickActionsRail';
 import { pendingCountByDay, startOfDay, type PlanScope } from './planUtils';
 
 /**
@@ -34,40 +34,17 @@ const GEOMETRY_SAVE_DEBOUNCE_MS = 500;
 /** 中文星期（getDay：0 = 周日） */
 const WEEKDAYS: readonly string[] = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
 
-/** 停靠窗快捷入口（V72）：target 与主窗 openTarget 解析规则一致（module:<id> / 命令 id） */
-const DOCK_SHORTCUTS: ReadonlyArray<{ target: string; name: string; icon: LucideIcon }> = [
-  { target: 'todo-list', name: '待办', icon: ClipboardList },
-  { target: 'module:sticky', name: '便签', icon: StickyNote },
-  { target: 'module:toolbox', name: '工具箱', icon: Wrench },
-  { target: 'vault', name: '密码库', icon: ShieldCheck },
-];
-
-/** 快捷入口条：贴在日历列底部，点按唤起主窗口并直达对应页面 */
-function DockQuickBar(): React.JSX.Element {
-  const openInMain = (target: string): void => {
-    // 主窗常驻（托盘形态），先唤起再广播导航事件（主窗 main.tsx 监听 toolbox:navigate）
-    void ipc.appShowMain().catch(() => undefined);
-    void import('@tauri-apps/api/event')
-      .then(({ emit }) => emit('toolbox:navigate', target))
-      .catch(() => undefined);
-  };
-
-  return (
-    <div className="grid shrink-0 grid-cols-4 gap-1.5">
-      {DOCK_SHORTCUTS.map(({ target, name, icon: Icon }) => (
-        <button
-          key={target}
-          type="button"
-          onClick={() => openInMain(target)}
-          title={`打开${name}（唤起主窗口）`}
-          className="flex flex-col items-center gap-1 rounded-lg border border-border/70 bg-card/70 px-1 py-2 text-[11px] text-muted-foreground transition hover:border-brand/40 hover:bg-brand-muted/40 hover:text-brand"
-        >
-          <Icon className="h-4 w-4" />
-          {name}
-        </button>
-      ))}
-    </div>
-  );
+/**
+ * dock 内「应用内跳转」的跨窗实现（V72）：
+ * 停靠窗与主窗各有独立 JS 上下文，本窗 setView 主窗看不到 —— 先唤起主窗
+ * （托盘形态常驻，show 即还原），再广播导航事件，由主窗 main.tsx 监听后
+ * 按 openTarget 规则切视图。系统面板类动作不经此路：直接在停靠窗本地执行。
+ */
+function dockNavigate(target: string): void {
+  void ipc.appShowMain().catch(() => undefined);
+  void import('@tauri-apps/api/event')
+    .then(({ emit }) => emit('toolbox:navigate', target))
+    .catch(() => undefined);
 }
 
 /** 时钟 HH:mm:ss（两位补零） */
@@ -264,8 +241,8 @@ export function WorkstationDockView(): React.JSX.Element {
             <div className="flex min-h-0 flex-1 flex-col">
               <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
             </div>
-            {/* V72：快捷入口贴在日历下方、与日历列底对齐 */}
-            <DockQuickBar />
+            {/* V72：主窗同款快捷入口（应用跳转跨窗直达；系统面板动作本地执行） */}
+            <QuickActionsRail variant="dock" onNavigate={dockNavigate} />
           </div>
         </div>
       ) : (
@@ -284,7 +261,7 @@ export function WorkstationDockView(): React.JSX.Element {
           </div>
           <div className="flex shrink-0 flex-col gap-2">
             <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
-            <DockQuickBar />
+            <QuickActionsRail variant="dock" onNavigate={dockNavigate} />
           </div>
         </div>
       )}

@@ -58,7 +58,7 @@ import {
 import { toast } from '@/components/ui/toast';
 import { ipc } from '@/lib/ipc';
 import { isTauri } from '@/platform/detect';
-import { openSettings, openTarget } from '@/core/navigation';
+import { openTarget } from '@/core/navigation';
 import { DEFAULT_QUICK_ACTION_IDS } from '@/core/settings';
 import { useAppStore } from '@/stores/useAppStore';
 import { cn } from '@/lib/utils';
@@ -277,7 +277,27 @@ function RailButton({
   );
 }
 
-export function QuickActionsRail(): React.JSX.Element {
+export interface QuickActionsRailProps {
+  /** 「dock」嵌入模式（V72）：限高三列、无底部常驻区，供停靠工作台日历下方复用 */
+  variant?: 'rail' | 'dock';
+  /**
+   * 应用内跳转回调：默认 undefined = 本窗 openTarget（主窗工作台用法）；
+   * dock 模式传入「唤起主窗 + toolbox:navigate 事件」实现跨窗直达
+   * （停靠窗有自己的 JS 上下文，本窗 setView 改的是停靠窗内部状态，主窗看不到）。
+   */
+  onNavigate?: (target: string) => void;
+}
+
+export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsRailProps): React.JSX.Element {
+  const dock = variant === 'dock';
+  /** 应用内跳转统一入口（settings 也走它：openTarget('settings') ≡ openSettings()） */
+  const navigate = (target: string): void => {
+    if (onNavigate !== undefined) {
+      onNavigate(target);
+    } else {
+      openTarget(target);
+    }
+  };
   const [actions, setActions] = useState<SysAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
@@ -408,7 +428,7 @@ export function QuickActionsRail(): React.JSX.Element {
         name={item.name}
         description={item.description}
         active={isTargetActive(item.target)}
-        onClick={() => openTarget(item.target)}
+        onClick={() => navigate(item.target)}
         onTip={setTip}
         onTipEnd={() => setTip(null)}
       />
@@ -485,12 +505,19 @@ export function QuickActionsRail(): React.JSX.Element {
   return (
     // `relative` 是自定义面板 `absolute right-full` 的定位上下文 —— 少了它，面板会
     // 以视口为参照滑到屏幕左侧外面去（整块看不见）。
-    <aside className="relative flex h-full shrink-0 flex-col items-center gap-1.5 self-stretch rounded-2xl border border-border bg-card py-3 shadow-panel">
+    // dock 模式：不拉伸高度（块级嵌在日历下方），其余结构一致。
+    <aside
+      className={cn(
+        'relative flex shrink-0 flex-col items-center gap-1.5 rounded-2xl border border-border bg-card shadow-panel',
+        dock ? 'w-full py-2' : 'h-full self-stretch py-3',
+      )}
+    >
       {/* —— 图标区：自适应分列 + 溢出滚动 —— */}
       <div
         ref={listRef}
         className={cn(
-          'flex min-h-0 flex-1 items-start gap-1.5 overflow-y-auto px-1.5',
+          'flex min-h-0 items-start gap-1.5 px-1.5',
+          dock ? 'scrollbar-thin max-h-[160px] overflow-y-auto' : 'flex-1 overflow-y-auto',
           overflow ? 'scrollbar-thin' : 'overflow-x-hidden',
         )}
       >
@@ -522,42 +549,46 @@ export function QuickActionsRail(): React.JSX.Element {
         ) : null}
       </div>
 
-      <span className="h-px w-8 shrink-0 bg-border" />
+      {/* dock 模式无底部常驻区，分隔线一并省略 */}
+      {!dock && <span className="h-px w-8 shrink-0 bg-border" />}
 
-      {/* —— 常驻底部：设置 / 自定义（永远钉在栏底，不随滚动藏起来）—— */}
-      <div className="flex shrink-0 flex-col gap-1.5 px-1.5">
-        <RailButton
-          icon={Settings}
-          name="设置中心"
-          description="快捷键 · 主题 · 开机启动 · 备份还原"
-          active={view.kind === 'settings'}
-          onClick={() => openSettings()}
-          onTip={setTip}
-          onTipEnd={() => setTip(null)}
-        />
-        <button
-          type="button"
-          onClick={() => setCustomizing((prev) => !prev)}
-          title="自定义快捷入口"
-          onMouseEnter={(event) =>
-            setTip({
-              name: '自定义快捷入口',
-              description: '从全量系统面板里勾选常用项，选择立即保存',
-              elevated: false,
-              rect: event.currentTarget.getBoundingClientRect(),
-            })
-          }
-          onMouseLeave={() => setTip(null)}
-          className={cn(
-            'flex h-11 w-11 items-center justify-center rounded-xl border transition',
-            customizing
-              ? 'border-brand/50 bg-brand-muted text-brand'
-              : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
-          )}
-        >
-          <Settings2 className="h-5 w-5" />
-        </button>
-      </div>
+      {/* —— 常驻底部：设置 / 自定义（永远钉在栏底，不随滚动藏起来；dock 模式省略，
+          自定义入口由空态按钮与「+N」溢出按钮承担）—— */}
+      {!dock && (
+        <div className="flex shrink-0 flex-col gap-1.5 px-1.5">
+          <RailButton
+            icon={Settings}
+            name="设置中心"
+            description="快捷键 · 主题 · 开机启动 · 备份还原"
+            active={view.kind === 'settings'}
+            onClick={() => navigate('settings')}
+            onTip={setTip}
+            onTipEnd={() => setTip(null)}
+          />
+          <button
+            type="button"
+            onClick={() => setCustomizing((prev) => !prev)}
+            title="自定义快捷入口"
+            onMouseEnter={(event) =>
+              setTip({
+                name: '自定义快捷入口',
+                description: '从全量系统面板里勾选常用项，选择立即保存',
+                elevated: false,
+                rect: event.currentTarget.getBoundingClientRect(),
+              })
+            }
+            onMouseLeave={() => setTip(null)}
+            className={cn(
+              'flex h-11 w-11 items-center justify-center rounded-xl border transition',
+              customizing
+                ? 'border-brand/50 bg-brand-muted text-brand'
+                : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
+            )}
+          >
+            <Settings2 className="h-5 w-5" />
+          </button>
+        </div>
+      )}
 
       {/* —— 自定义面板（往左滑出；不再被栏宽裁剪）—— */}
       {customizing ? (
