@@ -358,6 +358,60 @@
   overflow-wrap: anywhere;
 }
 
+/* ---------- 紧凑排版作用域（`.md-compact`，V75） ----------
+ *
+ * 停靠窗 / 工作台这类小面板里，Markdown 要与周围 12px 正文同档。
+ * 之前的做法是给外层加 `[&_.md-preview]:!text-xs`，只治了**编辑区**，
+ * 治不了同级的**占位符** —— 占位符落在没有字号的外层 div 上，回落到
+ * 16px 根字号，于是「正文 12px、占位 16px」一大一小，格外突兀。
+ *
+ * 现在把字号交给作用域外层，内部编辑区与占位符**都靠继承**取同一档，
+ * 一处定义、整块一致，也顺带把段落间距压紧。
+ */
+.md-compact {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.md-compact .md-preview {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.md-compact .md-preview p {
+  margin: 0.35em 0;
+}
+
+.md-compact .md-preview ul,
+.md-compact .md-preview ol {
+  margin: 0.35em 0;
+}
+
+.md-compact .md-preview li {
+  margin: 0.08em 0;
+}
+
+/* 小面板里标题不该撑出 1.6em 的大字号：压回正文字号，靠字重与色深分层 */
+.md-compact .md-preview h1,
+.md-compact .md-preview h2,
+.md-compact .md-preview h3,
+.md-compact .md-preview h4,
+.md-compact .md-preview h5,
+.md-compact .md-preview h6 {
+  margin: 0.5em 0 0.2em;
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.md-compact .md-preview.wysiwyg p:empty,
+.md-compact .md-preview.wysiwyg > div:empty,
+.md-compact .md-preview.wysiwyg p:has(> br:only-child),
+.md-compact .md-preview.wysiwyg > div:has(> br:only-child) {
+  min-height: 1.5em;
+  margin: 0.35em 0;
+}
+
 /* ---------- 桌面便签（`.note-markdown`） ----------
  *
  * 桌面便签的底是**暖色浅底**（琥珀便签纸），而上面整套 `.md-preview` 的颜色都走

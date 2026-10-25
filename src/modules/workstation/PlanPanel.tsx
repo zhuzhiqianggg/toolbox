@@ -168,16 +168,18 @@ export function PlanPanel({
   );
 
   return (
-    <section className="flex h-full min-h-[260px] flex-col gap-3 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-panel lg:min-h-0">
+    <section className="flex h-full min-h-[260px] flex-col gap-3 overflow-hidden rounded-xl border border-border bg-card p-4 shadow-panel lg:min-h-0">
       <header className="flex shrink-0 items-center gap-2">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+        {/* 与日历面板同一套「柔色底 + 同色字」图标块语言，两块面板并排才不打架
+            （V75：原来是 emerald-100 实底，和日历的 brand-muted 轻重不一致） */}
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-400">
           <ListTodo className="h-4 w-4" />
         </span>
         <h3 className="shrink-0 text-sm font-semibold text-foreground">
           计划 · {relativeDayLabel(anchorMs)}
         </h3>
         <span
-          className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground"
+          className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground"
           title={`未完成 ${pendingInScope} 条 · 共 ${visible.length} 条`}
         >
           未完成 {pendingInScope} · 共 {visible.length}
@@ -186,7 +188,7 @@ export function PlanPanel({
           type="button"
           onClick={() => onHideDoneChange(!hideDone)}
           className={cn(
-            'ml-auto shrink-0 rounded-md px-2 py-1 text-[11px] transition',
+            'ml-auto shrink-0 rounded-md px-2 py-1 text-xs transition',
             hideDone
               ? 'bg-brand-muted text-brand'
               : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -243,8 +245,8 @@ export function PlanPanel({
         {visible.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border py-10 text-center">
             <ListTodo className="h-6 w-6 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">这个范围还没有条目</p>
-            <p className="text-xs text-muted-foreground/70">在上方输入框写一条，回车即入</p>
+            <p className="text-xs text-muted-foreground">这个范围还没有条目</p>
+            <p className="text-[11px] text-muted-foreground/70">在上方输入框写一条，回车即入</p>
           </div>
         ) : (
           <>
@@ -303,14 +305,14 @@ function TodoRow({
   return (
     <div
       className={cn(
-        // V73 统一行卡片：未完成=浅卡可点，已完成=灰底弱化，展开=品牌色聚焦，
-        // 三态同一套圆角/边框/内边距，与日历面板的格子视觉对齐
+        // V75 统一行卡片：未完成=可点浅卡、已完成=更低对比的灰底、展开=品牌色聚焦。
+        // 三态共用同一套圆角/边框/内边距，保证并排时「同族不同态」而不是三种风格。
         'rounded-lg border transition',
         expanded
-          ? 'border-brand/40 bg-brand-muted/20'
+          ? 'border-brand/40 bg-brand-muted/15'
           : todo.done
-            ? 'border-transparent bg-muted/40'
-            : 'border-border/60 bg-background/50 hover:border-brand/30 hover:bg-accent/40',
+            ? 'border-transparent bg-muted/25'
+            : 'border-border/70 bg-background/50 hover:border-brand/30 hover:bg-accent/30',
       )}
     >
       {/* 摘要行：点任意位置都能展开（用户反馈「必须点前面圆圈才行」） */}
@@ -324,7 +326,12 @@ function TodoRow({
             onToggleExpand();
           }
         }}
-        className="group flex cursor-pointer items-center gap-2.5 px-2.5 py-2"
+        className={cn(
+          // V75 密度分层：已完成只留一行标题（信息已收束），未完成标题 + 完整正文。
+          // 对齐方式跟着变：单行居中，多行正文顶部对齐（否则小圆圈会飘在正文中间）。
+          'group flex cursor-pointer gap-2.5 px-2.5',
+          summary !== '' && !todo.done && !expanded ? 'items-start py-1.5' : 'items-center py-1.5',
+        )}
       >
         <button
           type="button"
@@ -336,6 +343,7 @@ function TodoRow({
           }}
           className={cn(
             'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition',
+            summary !== '' && !todo.done && !expanded ? 'mt-[1px]' : '',
             todo.done
               ? 'border-emerald-500 bg-emerald-500'
               : 'border-muted-foreground/40 hover:border-emerald-600',
@@ -370,13 +378,11 @@ function TodoRow({
                 : '!text-foreground',
             )}
           />
-          {!expanded && summary !== '' && (
-            <p
-              className={cn(
-                'mt-0.5 line-clamp-2 whitespace-pre-line text-[11px] leading-snug text-muted-foreground/80',
-                todo.done && 'opacity-60',
-              )}
-            >
+          {/* V75 信息密度（用户明确要求）：
+              · 已完成 → 只留标题一行，不再铺摘要（一屏能扫更多条）；
+              · 未完成 → 正文**完整展示**，不再 line-clamp 截断，一眼读得到计划内容。 */}
+          {!expanded && summary !== '' && !todo.done && (
+            <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-muted-foreground/85">
               {summary}
             </p>
           )}
@@ -421,96 +427,97 @@ function TodoRow({
         <div className="space-y-2 border-t border-brand/20 px-2.5 py-2">
           {/* 任务名称 */}
           <div>
-            <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              任务名称
-            </span>
+            <span className="mb-1 block text-[10px] text-muted-foreground">名称</span>
             <RichMarkdown
               value={todo.title}
               onChange={(next: string) => onPatch({ title: next })}
-              placeholder="任务名称"
+              placeholder="一句话说清要做什么"
               singleLine
               onEnter={onToggleExpand}
-              className="rounded-lg border border-border bg-background px-2.5 py-1 [&_p]:!my-0 [&_p]:!leading-snug [&_.md-preview]:!text-xs"
+              className="md-compact rounded-lg border border-border bg-background px-2.5 py-1"
               ariaLabel="任务名称"
             />
           </div>
 
           {/* 任务说明 */}
           <div>
-            <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              任务说明 · Markdown 即时渲染
-            </span>
+            <span className="mb-1 block text-[10px] text-muted-foreground">说明 · Markdown</span>
             <RichMarkdown
               value={todo.detail}
               onChange={(next: string) => onPatch({ detail: next })}
-              placeholder="补充说明：步骤、链接、清单…（**加粗**、- 列表、`代码` 都会立刻渲染）"
-              className="min-h-[56px] rounded-lg border border-border bg-background px-2.5 py-1.5 [&_p]:!my-0.5 [&_ul]:!my-0.5 [&_ol]:!my-0.5 [&_li]:!my-0 [&_.md-preview]:!text-xs [&_.md-preview]:!leading-normal"
+              placeholder="补充步骤、链接、清单…"
+              className="md-compact min-h-[56px] rounded-lg border border-border bg-background px-2.5 py-1.5"
               ariaLabel="任务说明"
             />
           </div>
 
-          {/* 操作条 */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">优先级</span>
-            {TODO_PRIORITIES.map((item) => (
+          {/* 操作条：优先级一行、日期一行（V75）
+              原来是单行 flex-wrap，面板一窄就乱换行，「优先级」标签甚至会被甩到下一行。
+              拆成两行固定结构后，两块永远各占一行，视觉上可预期。 */}
+          <div className="space-y-1.5 rounded-lg bg-muted/40 px-2 py-1.5">
+            <div className="flex items-center gap-1">
+              <span className="w-8 shrink-0 text-[10px] text-muted-foreground">优先级</span>
+              {TODO_PRIORITIES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onPatch({ priority: item.id })}
+                  className={cn(
+                    'rounded px-1.5 py-0.5 text-[11px] transition',
+                    todo.priority === item.id
+                      ? item.className
+                      : 'text-muted-foreground hover:bg-background hover:text-foreground',
+                  )}
+                >
+                  {item.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1">
+              <span className="w-8 shrink-0 text-[10px] text-muted-foreground">日期</span>
               <button
-                key={item.id}
                 type="button"
-                onClick={() => onPatch({ priority: item.id })}
+                onClick={() => onPatch({ dueAt: startOfDay(Date.now()) + 9 * 3600_000 })}
+                className="rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:bg-background hover:text-foreground"
+              >
+                今天
+              </button>
+              <button
+                type="button"
+                onClick={() => onPatch({ dueAt: startOfDay(Date.now()) + 86_400_000 + 9 * 3600_000 })}
+                className="rounded px-1.5 py-0.5 text-[11px] text-muted-foreground transition hover:bg-background hover:text-foreground"
+              >
+                明天
+              </button>
+              <button
+                type="button"
+                onClick={() => onPatch({ dueAt: null })}
                 className={cn(
-                  'rounded-md px-2 py-0.5 text-[11px] transition',
-                  todo.priority === item.id
-                    ? item.className
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  'rounded px-1.5 py-0.5 text-[11px] transition',
+                  todo.dueAt === null
+                    ? 'bg-background text-foreground'
+                    : 'text-muted-foreground hover:bg-background hover:text-foreground',
                 )}
               >
-                {item.name}
+                无日期
               </button>
-            ))}
-
-            <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground">日期</span>
-            <button
-              type="button"
-              onClick={() => onPatch({ dueAt: startOfDay(Date.now()) + 9 * 3600_000 })}
-              className="rounded-md px-2 py-0.5 text-[11px] text-muted-foreground transition hover:bg-accent hover:text-accent-foreground"
-            >
-              今天
-            </button>
-            <button
-              type="button"
-              onClick={() => onPatch({ dueAt: startOfDay(Date.now()) + 86_400_000 + 9 * 3600_000 })}
-              className="rounded-md px-2 py-0.5 text-[11px] text-muted-foreground transition hover:bg-accent hover:text-accent-foreground"
-            >
-              明天
-            </button>
-            <button
-              type="button"
-              onClick={() => onPatch({ dueAt: null })}
-              className={cn(
-                'rounded-md px-2 py-0.5 text-[11px] transition',
-                todo.dueAt === null
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-              )}
-            >
-              无日期
-            </button>
-            <span className="ml-auto text-[11px] text-muted-foreground">
-              当前：{todo.dueAt === null ? '无日期' : dueLabel(todo.dueAt)}
-            </span>
-
-            <button
-              type="button"
-              onClick={onDelete}
-              className="rounded-md p-1 text-muted-foreground transition hover:bg-accent hover:text-destructive"
-              aria-label={`删除 ${todo.title}`}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+              <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
+                当前 {todo.dueAt === null ? '无日期' : dueLabel(todo.dueAt)}
+              </span>
+              <button
+                type="button"
+                onClick={onDelete}
+                className="rounded p-1 text-muted-foreground transition hover:bg-background hover:text-destructive"
+                aria-label={`删除 ${todo.title}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* 锚点提示：让用户知道这条挂在哪一天 */}
-          <p className="text-[10px] text-muted-foreground/60">
+          <p className="text-[10px] leading-relaxed text-muted-foreground/70">
             日历当前选中 {relativeDayLabel(anchorMs)}；改日期只影响本条，不动其它条目。
           </p>
         </div>

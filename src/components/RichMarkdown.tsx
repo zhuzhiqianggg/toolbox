@@ -1382,10 +1382,11 @@ export function RichMarkdown({
         )}
       />
       {empty && placeholder !== '' && (
-        <span className={cn(
-          'pointer-events-none absolute left-0 top-0 w-full select-none text-muted-foreground/50',
-          className,
-        )}>
+        // V75：占位符**不再复用外层 className**。那个 className 里含边框 / 圆角 /
+        // 内边距 / 高度，套到占位符上会画出第二层框；而且字号类落在外层包装上时，
+        // 这个 span 拿不到，直接回落到 16px 根字号，比 12px 正文大一圈。
+        // 现在只靠继承：外层（如 `.md-compact`）给什么字号，占位符就是什么字号。
+        <span className="pointer-events-none absolute left-0 top-0 w-full select-none text-muted-foreground/50">
           {placeholder}
         </span>
       )}
