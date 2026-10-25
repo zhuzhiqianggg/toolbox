@@ -51,12 +51,6 @@ export interface PlanPanelProps {
 /** 范围 chip 顺序（`day` 的文案在渲染时按选中日期动态显示） */
 const SCOPE_ORDER: readonly PlanScope[] = ['day', 'week', 'month', 'undated', 'all'];
 
-/** 取说明的首行（收起态做单行摘要用） */
-function firstLineOf(source: string): string {
-  const line: string = source.split('\n').find((item: string): boolean => item.trim() !== '') ?? '';
-  return line.trim();
-}
-
 export function PlanPanel({
   todos,
   anchorMs,
@@ -299,8 +293,12 @@ function TodoRow({
   onPatch: (next: TodoPatch) => void;
 }): React.JSX.Element {
   const priority = priorityStyle(todo.priority);
-  /** 摘要要剥掉 Markdown 记号：之前直接把 `**重点**` 原样显示，列表里全是星号 */
-  const summary: string = useMemo(() => stripMarkdown(firstLineOf(todo.detail)), [todo.detail]);
+  /**
+   * 摘要剥掉 Markdown 记号后**整段**展示（V74：不再只取首行 —— 用户明确要
+   * 多行内容在收起态也能看到；超出两行由 line-clamp-2 截断）。
+   * 之前直接把 `**重点**` 原样显示，列表里全是星号，stripMarkdown 一并解决。
+   */
+  const summary: string = useMemo(() => stripMarkdown(todo.detail).trim(), [todo.detail]);
 
   return (
     <div
@@ -375,7 +373,7 @@ function TodoRow({
           {!expanded && summary !== '' && (
             <p
               className={cn(
-                'mt-0.5 truncate text-[11px] text-muted-foreground/80',
+                'mt-0.5 line-clamp-2 whitespace-pre-line text-[11px] leading-snug text-muted-foreground/80',
                 todo.done && 'opacity-60',
               )}
             >
@@ -420,7 +418,7 @@ function TodoRow({
 
       {/* 展开编辑区 */}
       {expanded && (
-        <div className="space-y-2.5 border-t border-brand/20 px-2.5 py-2.5">
+        <div className="space-y-2 border-t border-brand/20 px-2.5 py-2">
           {/* 任务名称 */}
           <div>
             <span className="mb-1 block text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -432,7 +430,7 @@ function TodoRow({
               placeholder="任务名称"
               singleLine
               onEnter={onToggleExpand}
-              className="rounded-lg border border-border bg-background px-2.5 py-1.5 !text-xs"
+              className="rounded-lg border border-border bg-background px-2.5 py-1 [&_p]:!my-0 [&_p]:!leading-snug [&_.md-preview]:!text-xs"
               ariaLabel="任务名称"
             />
           </div>
@@ -446,7 +444,7 @@ function TodoRow({
               value={todo.detail}
               onChange={(next: string) => onPatch({ detail: next })}
               placeholder="补充说明：步骤、链接、清单…（**加粗**、- 列表、`代码` 都会立刻渲染）"
-              className="min-h-[64px] rounded-lg border border-border bg-background px-2.5 py-2 !text-xs"
+              className="min-h-[56px] rounded-lg border border-border bg-background px-2.5 py-1.5 [&_p]:!my-0.5 [&_ul]:!my-0.5 [&_ol]:!my-0.5 [&_li]:!my-0 [&_.md-preview]:!text-xs [&_.md-preview]:!leading-normal"
               ariaLabel="任务说明"
             />
           </div>

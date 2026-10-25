@@ -218,6 +218,30 @@ function TipPortal({ tip }: { tip: TipState | null }): React.JSX.Element | null 
   );
 }
 
+/**
+ * 图标着色（V74）：整栏灰线性图标太素（用户反馈「纯黑白看着太累」）。
+ * 按 key 稳定哈希到一组和谐的 Tailwind 色上 —— 同一条目永远同一颜色，
+ * 浅色/深色模式各配一档（600/400）。
+ */
+const RAIL_TINTS: readonly string[] = [
+  'text-sky-600 dark:text-sky-400',
+  'text-violet-600 dark:text-violet-400',
+  'text-emerald-600 dark:text-emerald-400',
+  'text-amber-600 dark:text-amber-500',
+  'text-rose-600 dark:text-rose-400',
+  'text-cyan-600 dark:text-cyan-400',
+  'text-orange-600 dark:text-orange-400',
+  'text-teal-600 dark:text-teal-400',
+];
+
+function tintOf(key: string): string {
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash * 31 + key.charCodeAt(i)) | 0;
+  }
+  return RAIL_TINTS[Math.abs(hash) % RAIL_TINTS.length] ?? 'text-sky-600 dark:text-sky-400';
+}
+
 /** 栏内单个图标按钮 */
 function RailButton({
   icon: Icon,
@@ -226,6 +250,7 @@ function RailButton({
   elevated,
   running,
   active,
+  tint,
   onClick,
   onTip,
   onTipEnd,
@@ -236,6 +261,8 @@ function RailButton({
   elevated?: boolean;
   running?: boolean;
   active?: boolean;
+  /** 图标着色类（V74）；不传回落灰调 */
+  tint?: string;
   onClick: () => void;
   onTip: (tip: TipState) => void;
   onTipEnd: () => void;
@@ -264,12 +291,16 @@ function RailButton({
       className={cn(
         'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition',
         active
-          ? 'border-brand/50 bg-brand-muted text-brand'
-          : 'border-transparent text-muted-foreground hover:border-brand/40 hover:bg-brand-muted/60 hover:text-brand',
+          ? 'border-brand/50 bg-brand-muted'
+          : 'border-transparent hover:border-brand/40 hover:bg-brand-muted/60',
         running && 'opacity-60',
       )}
     >
-      {running === true ? <Loader2 className="h-5 w-5 animate-spin" /> : <Icon className="h-5 w-5" />}
+      {running === true ? (
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      ) : (
+        <Icon className={cn('h-5 w-5', tint ?? 'text-muted-foreground')} />
+      )}
       {elevated === true ? (
         <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-400" />
       ) : null}
@@ -436,6 +467,7 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
             name={item.name}
             description={item.description}
             active={isTargetActive(item.target)}
+            tint={tintOf(`app-${item.target}`)}
             onClick={() => navigate(item.target)}
             onTip={setTip}
             onTipEnd={() => setTip(null)}
@@ -458,6 +490,7 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
             description={action.description}
             elevated={action.elevated}
             running={runningId === action.id}
+            tint={tintOf(action.id)}
             onClick={() => run(action)}
             onTip={setTip}
             onTipEnd={() => setTip(null)}
@@ -473,6 +506,7 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
           icon={Wrench}
           name="还没有快捷入口"
           description="点这里从 50+ 个系统面板里挑常用的（终端 / 网络 / 服务 / 证书…）"
+          tint="text-brand"
           onClick={() => setCustomizing(true)}
           onTip={setTip}
           onTipEnd={() => setTip(null)}
@@ -576,6 +610,7 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
             name="设置中心"
             description="快捷键 · 主题 · 开机启动 · 备份还原"
             active={view.kind === 'settings'}
+            tint="text-sky-600 dark:text-sky-400"
             onClick={() => navigate('settings')}
             onTip={setTip}
             onTipEnd={() => setTip(null)}
@@ -596,8 +631,8 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
             className={cn(
               'flex h-11 w-11 items-center justify-center rounded-xl border transition',
               customizing
-                ? 'border-brand/50 bg-brand-muted text-brand'
-                : 'border-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
+                ? 'border-brand/50 bg-brand-muted text-violet-600 dark:text-violet-400'
+                : 'border-transparent text-violet-600 dark:text-violet-400 hover:bg-accent',
             )}
           >
             <Settings2 className="h-5 w-5" />
