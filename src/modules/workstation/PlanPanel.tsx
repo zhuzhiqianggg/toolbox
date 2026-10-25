@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ListTodo, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Eye, EyeOff, ListTodo, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
@@ -176,32 +176,34 @@ export function PlanPanel({
   return (
     <section className="flex h-full min-h-[260px] flex-col gap-2.5 overflow-hidden rounded-xl border border-border bg-card p-3 shadow-panel lg:min-h-0">
       <header className="flex shrink-0 items-center gap-2">
-        {/* 与日历面板同一套「柔色底 + 同色字」图标块语言，两块面板并排才不打架
-            （V75：原来是 emerald-100 实底，和日历的 brand-muted 轻重不一致） */}
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-400">
-          <ListTodo className="h-4 w-4" />
+        {/* 与日历面板同一套「柔色底 + 同色字」图标块语言，两块面板并排才不打架 */}
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-400">
+          <ListTodo className="h-3.5 w-3.5" />
         </span>
-        <h3 className="shrink-0 text-sm font-semibold text-foreground">
+        <h3 className="shrink-0 text-[13px] font-semibold text-foreground">
           计划 · {relativeDayLabel(anchorMs)}
         </h3>
+        {/* V80：原来是一枚「未完成 N · 共 M」胶囊，和标题、按钮挤在一行读起来很乱；
+            收成 2/7 这样的窄计数，信息不丢，横向压力也没了 */}
         <span
-          className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground"
+          className="shrink-0 text-[11px] tabular-nums text-muted-foreground/80"
           title={`未完成 ${pendingInScope} 条 · 共 ${visible.length} 条`}
         >
-          未完成 {pendingInScope} · 共 {visible.length}
+          {pendingInScope}/{visible.length}
         </span>
         <button
           type="button"
           onClick={() => onHideDoneChange(!hideDone)}
           className={cn(
-            'ml-auto shrink-0 rounded-md px-2 py-1 text-xs transition',
+            'ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition',
             hideDone
               ? 'bg-brand-muted text-brand'
-              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+              : 'text-muted-foreground/70 hover:bg-accent hover:text-foreground',
           )}
-          title={hideDone ? '显示已完成的条目' : '把已完成的条目折叠起来'}
+          title={hideDone ? '显示已完成的条目' : '隐藏已完成的条目'}
+          aria-label={hideDone ? '显示已完成的条目' : '隐藏已完成的条目'}
         >
-          {hideDone ? '已隐藏完成项' : '隐藏完成项'}
+          {hideDone ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
         </button>
       </header>
 
@@ -225,8 +227,8 @@ export function PlanPanel({
         ))}
       </div>
 
-      {/* 新增 */}
-      <div className="flex shrink-0 items-center gap-2">
+      {/* 新增：输入框与按钮同一高度（h-8），一行内不再高低不齐 */}
+      <div className="flex shrink-0 items-center gap-1.5">
         <Input
           ref={inputRef}
           value={draft}
@@ -238,17 +240,17 @@ export function PlanPanel({
           }}
           placeholder={addHint}
           title={addHintTitle}
-          className="h-9 text-[13px]"
+          className="h-8 text-[12px]"
           aria-label="新增事件"
         />
-        <Button size="sm" className="h-9 shrink-0 px-3" onClick={handleAdd}>
+        <Button size="sm" className="h-8 shrink-0 px-2.5 text-xs" onClick={handleAdd}>
           <Plus className="h-3.5 w-3.5" />
           添加
         </Button>
       </div>
 
-      {/* 列表 */}
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5">
+      {/* 列表：行间用 1px 分隔线（不靠卡片边框），每行结构、行高一致 */}
+      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col divide-y divide-border/40 overflow-y-auto pr-0.5">
         {visible.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border py-10 text-center">
             <ListTodo className="h-6 w-6 text-muted-foreground/40" />
@@ -267,11 +269,12 @@ export function PlanPanel({
 
             {doneRows.length > 0 ? (
               <>
-                <div className="mt-1 flex shrink-0 items-center gap-2 px-0.5 pt-1">
+                {/* 分组标签：与列表行同高节奏（24px），不再用 mt/pt 硬凑间距 */}
+                <div className="flex h-7 shrink-0 items-center gap-2 px-2">
                   <span className="text-[10px] tracking-wide text-muted-foreground/70">
                     已完成 {doneRows.length}
                   </span>
-                  <span className="h-px flex-1 bg-border" />
+                  <span className="h-px flex-1 bg-border/70" />
                 </div>
                 {doneRows.map(renderRow)}
               </>
@@ -333,18 +336,28 @@ function TodoRow({
   const overdue = overdueDayCount > 0 && !todo.done;
   const showBadge = schedule !== null && (overdue || showSchedule);
 
+  /**
+   * 优先级 → 行首 2px 细条颜色（V80）。
+   * 之前优先级是「重要 / 紧急」文字徽标，有徽标的行和没徽标的行宽度不一样，
+   * 一列待办看下来左右缘全是锯齿 —— 改成**不占位的色条**：结构完全一致，
+   * 优先级照样一眼可见。
+   */
+  const priorityAccent =
+    todo.done || todo.priority < 2
+      ? 'bg-transparent'
+      : todo.priority >= 3
+        ? 'bg-rose-500/80'
+        : 'bg-amber-400/80';
+
+  const badgeText = showBadge && schedule !== null ? schedule : '';
+
   return (
     <div
       className={cn(
-        // V78 列表化：原来每条都是一个带边框的小卡片，十条待办就像十个补丁贴在面板上，
-        // 用户直评「待办很丑」。改成**无边条目的列表**：靠 1px 分隔线 + 悬停整行高亮，
-        // 展开态才上品牌色底，让「列表」读起来是一页清单而不是一堆卡片。
-        'border-b border-border/45 transition last:border-b-0',
-        expanded
-          ? 'border-b-brand/25 bg-brand-muted/25'
-          : todo.done
-            ? 'hover:bg-muted/30'
-            : 'hover:bg-accent/40',
+        // V80 统一行高：每一行都是 h-11（44px），正文最多两行 line-clamp —— 之前正文
+        // 不限高，三行、五行、一行的条目混在一列里，用户直评「看着都不平衡均匀」。
+        'transition',
+        expanded ? 'bg-brand-muted/25' : todo.done ? 'hover:bg-muted/30' : 'hover:bg-accent/40',
       )}
     >
       {/* 摘要行：点任意位置都能展开（用户反馈「必须点前面圆圈才行」） */}
@@ -358,11 +371,13 @@ function TodoRow({
             onToggleExpand();
           }
         }}
-        className={cn(
-          // V79：正文一律多行渲染，所以整行**顶部对齐**（小圆圈跟着首行基线，不再居中飘移）
-          'group flex cursor-pointer items-start gap-2.5 px-2.5 py-2',
-        )}
+        className="group relative flex h-11 cursor-pointer items-center gap-2.5 px-2"
       >
+        <span
+          aria-hidden
+          title={`优先级：${priority.name}`}
+          className={cn('absolute inset-y-2 left-0 w-[2px] rounded-r-full', priorityAccent)}
+        />
         <button
           type="button"
           aria-label={todo.done ? '标记未完成' : '标记完成'}
@@ -372,10 +387,10 @@ function TodoRow({
             onToggleDone();
           }}
           className={cn(
-            'mt-[2px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition',
+            'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition',
             todo.done
               ? 'border-emerald-500 bg-emerald-500'
-              : 'border-muted-foreground/40 hover:border-emerald-600',
+              : 'border-muted-foreground/50 hover:border-emerald-600',
           )}
         >
           {todo.done ? (
@@ -393,17 +408,18 @@ function TodoRow({
         </button>
 
         {/*
-          * 正文区（V79）：只有一个文本块 —— 合并后的「全文」，13px 统一正文色。
-          * 展开时不再重复渲染（编辑框里就是同一段文字），这一行退化为状态条。
+          * 正文区（V79/V80）：只有一个文本块，两行封顶 —— 合并「标题 + 说明」后
+          * 内容可以很长，收起态无论如何只占两行，行高才整齐；全文展开后编辑。
           */}
         {expanded ? (
-          <span className="min-w-0 flex-1 truncate text-[11px] leading-none text-muted-foreground/60">
+          <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground/60">
             编辑中
           </span>
         ) : (
           <p
+            title={body === '' ? undefined : body}
             className={cn(
-              'min-w-0 flex-1 whitespace-pre-line text-[13px] leading-relaxed',
+              'line-clamp-2 min-w-0 flex-1 whitespace-pre-line text-[13px] leading-[1.4]',
               todo.done ? 'text-muted-foreground line-through opacity-70' : 'text-foreground',
             )}
           >
@@ -411,42 +427,29 @@ function TodoRow({
           </p>
         )}
 
-        {/* 优先级在前、时间在后：优先级是「要不要现在看」的信号，比时间更该先被扫到 */}
-        {todo.priority > 1 ? (
-          <span
-            className={cn('shrink-0 rounded px-1.5 py-0.5 text-[10px]', priority.className)}
-            title={`优先级：${priority.name}`}
-          >
-            {priority.name}
-          </span>
-        ) : null}
-
-        {showBadge ? (
-          <span
-            className={cn(
-              // 排期徽标统一成小胶囊：逾期红底加粗、正常灰底，与日历的休/班徽标同语言
-              'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] tabular-nums',
-              overdue
-                ? 'bg-destructive/10 font-medium text-destructive'
-                : 'bg-muted text-muted-foreground',
-            )}
-            title={
-              todo.dueAt === null
-                ? ''
-                : overdue
-                  ? `到期日 ${dayLabel(todo.dueAt)}，已经逾期 ${overdueDayCount} 天`
-                  : `到期日 ${dayLabel(todo.dueAt)}`
-            }
-          >
-            {schedule}
-          </span>
-        ) : null}
+        {/* 固定宽度的排期列：**有没有徽标都占同一格**，正文右缘才对得齐 */}
+        <span
+          className={cn(
+            'w-[62px] shrink-0 truncate text-right text-[10px] tabular-nums',
+            badgeText === '' ? 'invisible' : '',
+            overdue ? 'font-medium text-destructive' : 'text-muted-foreground/70',
+          )}
+          title={
+            todo.dueAt === null || badgeText === ''
+              ? undefined
+              : overdue
+                ? `到期日 ${dayLabel(todo.dueAt)}，已经逾期 ${overdueDayCount} 天`
+                : `到期日 ${dayLabel(todo.dueAt)}`
+          }
+        >
+          {badgeText === '' ? '—' : badgeText}
+        </span>
 
         <ChevronDown
           className={cn(
-            'h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition',
-            // 默认半可见（暗示「这行可以点开」），悬停与展开态全亮
-            'opacity-45 group-hover:opacity-100',
+            'h-3.5 w-3.5 shrink-0 text-muted-foreground/60 transition',
+            // 默认隐身但**始终占位**（右缘不因悬停跳动），悬停 / 展开才露出来
+            'opacity-0 group-hover:opacity-100',
             expanded && 'rotate-180 opacity-100',
           )}
         />

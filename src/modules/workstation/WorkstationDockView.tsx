@@ -195,7 +195,7 @@ export function WorkstationDockView(): React.JSX.Element {
       */}
       <div
         data-tauri-drag-region
-        className="relative flex shrink-0 select-none items-center justify-between gap-3 px-3.5 pb-2.5 pt-3"
+        className="relative flex shrink-0 select-none items-center justify-between gap-3 px-3 pb-2 pt-3"
       >
         <div data-tauri-drag-region className="flex items-baseline">
           <span
@@ -249,11 +249,13 @@ export function WorkstationDockView(): React.JSX.Element {
               focusToken={focusToken}
             />
           </div>
-          <div className="flex min-h-0 w-[320px] shrink-0 flex-col gap-2 border-l border-border/60 pl-3">
+          <div className="flex min-h-0 w-[320px] shrink-0 flex-col gap-2">
             <div className="flex min-h-0 flex-1 flex-col">
               <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
             </div>
-            {/* V72：主窗同款快捷入口（应用跳转跨窗直达；系统面板动作本地执行） */}
+            {/* V72：主窗同款快捷入口（应用跳转跨窗直达；系统面板动作本地执行）
+                V80：去掉列间那条 border-l + pl-3 —— 两块面板各自已有 1px 边框，
+                再叠一条竖线就是两条平行的线，既脏又白吃 12px 宽度（快捷栏因此横向溢出 4px） */}
             <QuickActionsRail variant="dock" onNavigate={dockNavigate} />
           </div>
         </div>
