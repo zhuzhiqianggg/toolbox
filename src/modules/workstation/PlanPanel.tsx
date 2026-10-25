@@ -235,7 +235,7 @@ export function PlanPanel({
           }}
           placeholder={addHint}
           title={addHintTitle}
-          className="h-9 text-sm"
+          className="h-9 text-[13px]"
           aria-label="新增事件"
         />
         <Button size="sm" className="h-9 shrink-0 px-3" onClick={handleAdd}>
@@ -357,14 +357,19 @@ function TodoRow({
           ) : null}
         </button>
 
-        <div className="min-w-0 flex-1">
+        {/* 字号挂在父级：`.md-preview.md-inline` 的 font-size:inherit（双类 0,2,0）
+            会压过同元素的 Tailwind 字号类（单类 0,1,0）—— V73 前标题一直按
+            基础 16px 渲染，这就是「待办字比日历大」的根因；颜色用 ! 保证压过
+            `.md-preview` 的 color 声明 */}
+        <div className="min-w-0 flex-1 text-xs leading-snug">
           <MdText
             source={todo.title}
             inline
             fallback="未命名"
             className={cn(
-              'text-[13px] leading-snug',
-              todo.done ? 'text-muted-foreground line-through opacity-70' : 'text-foreground',
+              todo.done
+                ? '!text-muted-foreground line-through opacity-70'
+                : '!text-foreground',
             )}
           />
           {!expanded && summary !== '' && (
@@ -427,7 +432,7 @@ function TodoRow({
               placeholder="任务名称"
               singleLine
               onEnter={onToggleExpand}
-              className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-[13px]"
+              className="rounded-lg border border-border bg-background px-2.5 py-1.5 !text-xs"
               ariaLabel="任务名称"
             />
           </div>
@@ -441,7 +446,7 @@ function TodoRow({
               value={todo.detail}
               onChange={(next: string) => onPatch({ detail: next })}
               placeholder="补充说明：步骤、链接、清单…（**加粗**、- 列表、`代码` 都会立刻渲染）"
-              className="min-h-[64px] rounded-lg border border-border bg-background px-2.5 py-2 text-[13px]"
+              className="min-h-[64px] rounded-lg border border-border bg-background px-2.5 py-2 !text-xs"
               ariaLabel="任务说明"
             />
           </div>
