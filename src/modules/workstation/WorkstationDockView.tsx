@@ -207,11 +207,12 @@ export function WorkstationDockView(): React.JSX.Element {
         </div>
       </div>
 
-      {/* 内容区（V68 双列）：左计划（主操作区）/ 右日历，各自滚动 —— 计划醒目优先；
-          窗宽不足 560 时回落单列（计划在上、日历在下） */}
+      {/* 内容区（V68 双列，V71 等高撑满）：左计划（主操作区）/ 右日历。
+          面板经 h-full 撑满列高、各自内部滚动 —— 不再出现「内容少时面板缩短、
+          底下留一大片裸 Mica」的失衡观感；窗宽不足 560 时回落单列（计划在上、日历在下） */}
       {twoCol ? (
         <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3">
-          <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="flex min-h-0 flex-1 flex-col">
             <PlanPanel
               todos={todos}
               anchorMs={anchorMs}
@@ -222,22 +223,27 @@ export function WorkstationDockView(): React.JSX.Element {
               focusToken={focusToken}
             />
           </div>
-          <div className="scrollbar-thin flex min-h-0 w-[300px] shrink-0 flex-col overflow-y-auto border-l border-border/60 pl-3">
+          <div className="flex min-h-0 w-[320px] shrink-0 flex-col border-l border-border/60 pl-3">
             <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
           </div>
         </div>
       ) : (
+        // 单列：面板按内容高度排布、外层滚动（包一层非拉伸容器抵消面板的 h-full）
         <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3">
-          <PlanPanel
-            todos={todos}
-            anchorMs={anchorMs}
-            scope={scope}
-            onScopeChange={setScope}
-            hideDone={hideDone}
-            onHideDoneChange={setHideDone}
-            focusToken={focusToken}
-          />
-          <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
+          <div className="flex shrink-0 flex-col">
+            <PlanPanel
+              todos={todos}
+              anchorMs={anchorMs}
+              scope={scope}
+              onScopeChange={setScope}
+              hideDone={hideDone}
+              onHideDoneChange={setHideDone}
+              focusToken={focusToken}
+            />
+          </div>
+          <div className="flex shrink-0 flex-col">
+            <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
+          </div>
         </div>
       )}
 

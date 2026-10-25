@@ -288,7 +288,9 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     .position(x, y)
     .build()
     .map_err(|err| format!("创建工作台停靠窗失败：{err}"))?;
-    // 挂到桌面层（V68）：壁纸之上、图标之下，普通窗口之下 —— 属于桌面本身
+    // 挂到桌面层（V68）：壁纸之上、图标之下，普通窗口之下 —— 属于桌面本身。
+    // WorkerW 由 shell 异步创建（尤其开机自启时 Explorer 可能还没就绪），
+    // 轮询重试放在后台线程做，绝不阻塞启动路径（V71）。
     #[cfg(target_os = "windows")]
     {
         let win = app.get_webview_window(WORKSTATION_LABEL);
@@ -296,7 +298,15 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
             match win.hwnd() {
                 // tauri 依赖树里的 windows（0.61）与本项目直接依赖的 windows（0.58）
                 // 是两个不同 crate，HWND 类型不互通 —— 走裸指针跨过这条版本边界
-                Ok(hwnd) => pin_workstation_to_desktop(windows::Win32::Foundation::HWND(hwnd.0)),
+                Ok(hwnd) => {
+                    // HWND 内部是裸指针（非 Send），跨线程只传 usize，线程内重建
+                    let pinned_raw = hwnd.0 as usize;
+                    std::thread::spawn(move || {
+                        pin_workstation_to_desktop(windows::Win32::Foundation::HWND(
+                            pinned_raw as *mut core::ffi::c_void,
+                        ));
+                    });
+                }
                 Err(err) => eprintln!("[Toolbox] 停靠窗取 HWND 失败（保持普通窗口形态）：{err}"),
             }
         }
@@ -306,37 +316,72 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// 将停靠窗挂到桌面层（V68，仅 Windows）。
+/// 将停靠窗挂到桌面层（V68 引入，V71 加固，仅 Windows）。
 ///
 /// 经典 WorkerW 技巧：给桌面宿主 Progman 发 `0x052C` 消息，shell 会在壁纸与
 /// 图标层之间生成一个 WorkerW；再把我们的 HWND `SetParent` 过去 —— 窗口从此
-/// 属于桌面本身：回到桌面才可见、可交互，任何普通窗口都能盖住它。
+/// 属于桌面本身：回到桌面才可见、可交互，任何普通窗口都能盖住它，
+/// **Win+D 显示桌面也不会把它最小化**（它不再是顶层窗口，不受「最小化全部」影响）。
 ///
-/// 失败时静默降级为普通窗口形态（功能不受影响，只是层次回到普通窗口）。
+/// V71：`0x052C` 之后 WorkerW 由 shell **异步**创建（开机自启时 Explorer 甚至可能
+/// 还没就绪），V68 一次性查找失败就静默放弃 —— 窗口留在普通层，Win+D 一压就退到
+/// 后台（用户实测复现）。现在轮询重试最多 ~6s，并在挂载后用 `GetParent` 验证；
+/// 仍失败则打印日志降级为普通窗口形态（功能不受影响，只是层次回到普通窗口）。
 #[cfg(target_os = "windows")]
 fn pin_workstation_to_desktop(hwnd: windows::Win32::Foundation::HWND) {
     use windows::core::w;
     use windows::Win32::Foundation::{LPARAM, WPARAM};
     use windows::Win32::UI::WindowsAndMessaging::{
-        FindWindowExW, FindWindowW, SendMessageW, SetParent,
+        FindWindowExW, FindWindowW, GetParent, SendMessageW, SetParent,
     };
 
+    /// 轮询次数与间隔（约 6s：覆盖 Explorer 冷启动的常见窗口期）
+    const RETRIES: usize = 60;
+    const RETRY_INTERVAL_MS: u64 = 100;
+
+    // 1) Progman = 桌面窗口宿主（没有它就没有后续，直接放弃）
+    let progman = match unsafe { FindWindowW(w!("Progman"), None) } {
+        Ok(progman) => progman,
+        Err(err) => {
+            eprintln!("[Toolbox] 未找到 Progman（保持普通窗口形态）：{err}");
+            return;
+        }
+    };
     unsafe {
-        // 1) Progman = 桌面窗口宿主
-        let Ok(progman) = FindWindowW(w!("Progman"), None) else {
-            return;
-        };
-        // 2) 幂等触发：shell 收到 0x052C 后生成 WorkerW（仅首次生效）
+        // 2) 幂等触发：shell 收到 0x052C 后异步生成 WorkerW（仅首次生效）
         SendMessageW(progman, 0x052C, WPARAM(0), LPARAM(0));
-        // 3) 图标层 SHELLDLL_DefView 通常挂在 Progman 直属
-        let defview = FindWindowExW(progman, None, w!("SHELLDLL_DefView"), None).ok();
-        // 4) 目标父窗 = 图标层之后的第一个兄弟 WorkerW
-        //    （windows 0.58 的 Param 只认 Option<&HWND> 借用形态，owned Option 不过 bound）
-        let Ok(worker) = FindWindowExW(None, defview.as_ref(), w!("WorkerW"), None) else {
-            return;
-        };
-        // 5) 挂过去（壁纸之上、图标之下、一切普通窗口之下）
+    }
+    // 3) 图标层 SHELLDLL_DefView 通常挂在 Progman 直属；目标父窗 = 它之后的第一个
+    //    兄弟 WorkerW。WorkerW 创建是异步的 —— 轮询直到出现或超时。
+    let mut worker = None;
+    for attempt in 0..RETRIES {
+        // （windows 0.58 的 Param 只认 Option<&HWND> 借用形态，owned Option 不过 bound）
+        let defview = unsafe { FindWindowExW(progman, None, w!("SHELLDLL_DefView"), None).ok() };
+        match unsafe { FindWindowExW(None, defview.as_ref(), w!("WorkerW"), None) } {
+            Ok(found) => {
+                worker = Some(found);
+                break;
+            }
+            Err(_) => {
+                if attempt + 1 == RETRIES {
+                    eprintln!(
+                        "[Toolbox] 等待桌面 WorkerW 超时（{RETRIES} 次 x {RETRY_INTERVAL_MS}ms，保持普通窗口形态）"
+                    );
+                    return;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(RETRY_INTERVAL_MS));
+            }
+        }
+    }
+    let Some(worker) = worker else {
+        return;
+    };
+    unsafe {
+        // 4) 挂过去（壁纸之上、图标之下、一切普通窗口之下）并验证
         let _ = SetParent(hwnd, worker);
+        if GetParent(hwnd).unwrap_or_default() != worker {
+            eprintln!("[Toolbox] 停靠窗挂载桌面层后 GetParent 校验不符（可能被 shell 重置）");
+        }
     }
 }
 

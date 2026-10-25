@@ -133,7 +133,7 @@ export function CalendarPanel({ anchorMs, onSelect, pendingByDay }: CalendarPane
   const gz = ganZhi(view.year);
 
   return (
-    <section className="scrollbar-thin flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-panel lg:h-full lg:min-h-0 lg:overflow-y-auto">
+    <section className="scrollbar-thin flex h-full min-h-0 flex-col gap-3 overflow-y-auto rounded-xl border border-border bg-card p-4 shadow-panel">
       <header className="flex shrink-0 items-center gap-2">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-muted text-brand">
           <CalendarDays className="h-4 w-4" />

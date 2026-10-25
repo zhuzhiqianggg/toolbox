@@ -136,14 +136,9 @@ export function ToolboxView(_props: ModuleProps): React.JSX.Element {
   return (
     <div className="flex h-full flex-col bg-canvas">
       <header className="brand-wash shrink-0 px-5 pb-4 pt-5">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">工具箱</h2>
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              {all.length} 个工具 · 也可用快捷键呼出命令面板直接搜名称或拼音首字母
-            </p>
-          </div>
-        </div>
+        <p className="text-[13px] text-muted-foreground">
+          {all.length} 个工具 · 也可用快捷键呼出命令面板直接搜名称或拼音首字母
+        </p>
 
         {/* 搜索框 */}
         <div className="relative mt-3.5">

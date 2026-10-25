@@ -244,10 +244,6 @@ export default function NoteListView(_props: NoteListViewProps = {}): React.JSX.
     <div className="flex h-full min-h-0 flex-col">
       {/* 工具条 */}
       <header className="flex shrink-0 items-center gap-2 px-4 pb-2 pt-3">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
-          <NotebookPen className="h-4 w-4" />
-        </span>
-        <h2 className="shrink-0 text-sm font-semibold text-foreground">便签</h2>
         <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
           {notes.length}
         </span>

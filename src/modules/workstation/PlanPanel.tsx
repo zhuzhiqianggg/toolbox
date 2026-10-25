@@ -174,7 +174,7 @@ export function PlanPanel({
   );
 
   return (
-    <section className="flex min-h-[260px] flex-col gap-3 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-panel lg:min-h-0">
+    <section className="flex h-full min-h-[260px] flex-col gap-3 overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-panel lg:min-h-0">
       <header className="flex shrink-0 items-center gap-2">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
           <ListTodo className="h-4 w-4" />
