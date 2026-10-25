@@ -222,24 +222,39 @@ function TipPortal({ tip }: { tip: TipState | null }): React.JSX.Element | null 
  * 图标着色（V74）：整栏灰线性图标太素（用户反馈「纯黑白看着太累」）。
  * 按 key 稳定哈希到一组和谐的 Tailwind 色上 —— 同一条目永远同一颜色，
  * 浅色/深色模式各配一档（600/400）。
+ *
+ * V77：从「只有图标有颜色」升级为**同色系磁贴**（柔色底 + 同色图标）——
+ * 图标 44px 一格铺在白色面板里太散，加一层淡色底后整栏立刻成组、也更有现代感。
  */
-const RAIL_TINTS: readonly string[] = [
-  'text-sky-600 dark:text-sky-400',
-  'text-violet-600 dark:text-violet-400',
-  'text-emerald-600 dark:text-emerald-400',
-  'text-amber-600 dark:text-amber-500',
-  'text-rose-600 dark:text-rose-400',
-  'text-cyan-600 dark:text-cyan-400',
-  'text-orange-600 dark:text-orange-400',
-  'text-teal-600 dark:text-teal-400',
+interface RailTint {
+  /** 图标颜色 */
+  icon: string;
+  /** 磁贴底色（含悬停态） */
+  tile: string;
+}
+
+const RAIL_TINTS: readonly RailTint[] = [
+  { icon: 'text-sky-600 dark:text-sky-400', tile: 'bg-sky-500/10 hover:bg-sky-500/20' },
+  { icon: 'text-violet-600 dark:text-violet-400', tile: 'bg-violet-500/10 hover:bg-violet-500/20' },
+  { icon: 'text-emerald-600 dark:text-emerald-400', tile: 'bg-emerald-500/10 hover:bg-emerald-500/20' },
+  { icon: 'text-amber-600 dark:text-amber-500', tile: 'bg-amber-500/10 hover:bg-amber-500/20' },
+  { icon: 'text-rose-600 dark:text-rose-400', tile: 'bg-rose-500/10 hover:bg-rose-500/20' },
+  { icon: 'text-cyan-600 dark:text-cyan-400', tile: 'bg-cyan-500/10 hover:bg-cyan-500/20' },
+  { icon: 'text-orange-600 dark:text-orange-400', tile: 'bg-orange-500/10 hover:bg-orange-500/20' },
+  { icon: 'text-teal-600 dark:text-teal-400', tile: 'bg-teal-500/10 hover:bg-teal-500/20' },
 ];
 
-function tintOf(key: string): string {
+const NEUTRAL_TINT: RailTint = {
+  icon: 'text-muted-foreground',
+  tile: 'bg-muted/50 hover:bg-accent',
+};
+
+function tintOf(key: string): RailTint {
   let hash = 0;
   for (let i = 0; i < key.length; i += 1) {
     hash = (hash * 31 + key.charCodeAt(i)) | 0;
   }
-  return RAIL_TINTS[Math.abs(hash) % RAIL_TINTS.length] ?? 'text-sky-600 dark:text-sky-400';
+  return RAIL_TINTS[Math.abs(hash) % RAIL_TINTS.length] ?? RAIL_TINTS[0] ?? NEUTRAL_TINT;
 }
 
 /** 栏内单个图标按钮 */
@@ -261,13 +276,14 @@ function RailButton({
   elevated?: boolean;
   running?: boolean;
   active?: boolean;
-  /** 图标着色类（V74）；不传回落灰调 */
-  tint?: string;
+  /** 图标着色磁贴（V77）；不传回落中性灰 */
+  tint?: RailTint;
   onClick: () => void;
   onTip: (tip: TipState) => void;
   onTipEnd: () => void;
 }): React.JSX.Element {
   const ref = useRef<HTMLButtonElement | null>(null);
+  const tone = tint ?? NEUTRAL_TINT;
 
   const show = (): void => {
     const node = ref.current;
@@ -289,20 +305,21 @@ function RailButton({
       onMouseLeave={onTipEnd}
       onBlur={onTipEnd}
       className={cn(
-        'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition',
-        active
-          ? 'border-brand/50 bg-brand-muted'
-          : 'border-transparent hover:border-brand/40 hover:bg-brand-muted/60',
+        // V77：柔色磁贴底 + 同色图标，等宽等高的方格，整栏才对齐成组
+        'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition',
+        tone.tile,
+        // 当前视图 / 展开态：品牌色内描边，不改变底色
+        active && 'ring-1 ring-inset ring-brand/50',
         running && 'opacity-60',
       )}
     >
       {running === true ? (
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       ) : (
-        <Icon className={cn('h-5 w-5', tint ?? 'text-muted-foreground')} />
+        <Icon className={cn('h-5 w-5', tone.icon)} />
       )}
       {elevated === true ? (
-        <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-amber-400" />
+        <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-400" />
       ) : null}
     </button>
   );
@@ -506,7 +523,7 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
           icon={Wrench}
           name="还没有快捷入口"
           description="点这里从 50+ 个系统面板里挑常用的（终端 / 网络 / 服务 / 证书…）"
-          tint="text-brand"
+          tint={{ icon: 'text-brand', tile: 'bg-brand-muted hover:bg-brand-muted/80' }}
           onClick={() => setCustomizing(true)}
           onTip={setTip}
           onTipEnd={() => setTip(null)}
@@ -554,10 +571,11 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
         dock ? 'w-full py-2' : 'h-full self-stretch py-3',
       )}
     >
-      {/* —— 图标区：主窗=按高度自适应分列 + 溢出滚动；dock=flex-wrap 平铺（最多
-          两行高，更多滚动兜底），全部 Windows 功能快速入口直接可见 —— */}
+      {/* —— 图标区：主窗=按高度自适应分列 + 溢出滚动；dock=6 列等宽网格平铺
+          （V77：原来是 flex-wrap justify-center，9 个图标排成 6+3 且第二行居中，
+          上下两行对不齐；改网格后列对列，第三行之后自动换行）—— */}
       {dock ? (
-        <div className="scrollbar-thin flex max-h-[104px] flex-wrap items-start justify-center gap-1.5 overflow-y-auto px-1.5 py-1">
+        <div className="scrollbar-thin grid max-h-[116px] grid-cols-6 justify-items-center gap-1.5 overflow-y-auto px-2 py-1.5">
           {items}
         </div>
       ) : (
@@ -610,7 +628,7 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
             name="设置中心"
             description="快捷键 · 主题 · 开机启动 · 备份还原"
             active={view.kind === 'settings'}
-            tint="text-sky-600 dark:text-sky-400"
+            tint={tintOf('app-settings')}
             onClick={() => navigate('settings')}
             onTip={setTip}
             onTipEnd={() => setTip(null)}
@@ -629,10 +647,10 @@ export function QuickActionsRail({ variant = 'rail', onNavigate }: QuickActionsR
             }
             onMouseLeave={() => setTip(null)}
             className={cn(
-              'flex h-11 w-11 items-center justify-center rounded-xl border transition',
+              'flex h-11 w-11 items-center justify-center rounded-xl transition',
               customizing
-                ? 'border-brand/50 bg-brand-muted text-violet-600 dark:text-violet-400'
-                : 'border-transparent text-violet-600 dark:text-violet-400 hover:bg-accent',
+                ? 'bg-violet-500/20 text-violet-600 ring-1 ring-inset ring-violet-500/40 dark:text-violet-400'
+                : 'bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 dark:text-violet-400',
             )}
           >
             <Settings2 className="h-5 w-5" />

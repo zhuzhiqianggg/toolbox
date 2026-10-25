@@ -121,26 +121,53 @@ export function relativeDayLabel(ms: number): string {
   return dayLabel(ms);
 }
 
-/** 时间标签：今天/明天只显示时刻，其余显示「月-日」 */
-export function dueLabel(dueAt: number): string {
-  const d = new Date(dueAt);
-  const pad = (n: number): string => String(n).padStart(2, '0');
-  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  const today = startOfDay(Date.now());
-  const day = startOfDay(dueAt);
-  if (day === today) {
-    return time;
+/**
+ * 是否已逾期：**按天**判定，到期日早于今天就算逾期。
+ *
+ * V77 之前是 `dueAt < Date.now()`，于是「今天 09:00」的事下午一过就变红——
+ * 用户看到整列表一片红 + 全是「09:00」，反馈「逾期有什么作用，全都是 9」。
+ * 工作台的排期粒度是「天」，当天的任务到当天结束前都还在计划内。
+ */
+export function isOverdue(todo: Todo): boolean {
+  if (todo.done || todo.dueAt === null) {
+    return false;
   }
-  if (day === addDays(today, 1)) {
-    return `明天 ${time}`;
-  }
-  if (day === addDays(today, -1)) {
-    return `昨天 ${time}`;
-  }
-  return `${d.getMonth() + 1}-${pad(d.getDate())} ${time}`;
+  return startOfDay(todo.dueAt) < startOfDay(Date.now());
 }
 
-/** 是否已逾期（未完成且到期时间早于此刻） */
-export function isOverdue(todo: Todo): boolean {
-  return !todo.done && todo.dueAt !== null && todo.dueAt < Date.now();
+/** 逾期天数（不足一天按 1 天算；未逾期返回 0） */
+export function overdueDays(todo: Todo): number {
+  if (!isOverdue(todo) || todo.dueAt === null) {
+    return 0;
+  }
+  return Math.max(1, Math.round((startOfDay(Date.now()) - startOfDay(todo.dueAt)) / DAY_MS));
+}
+
+/**
+ * 排期徽标文案：`逾期 3 天` / `今天` / `明天` / `昨天` / `10月28日`；无日期返回 null。
+ *
+ * 刻意**不带时刻**：新建默认就是 09:00，每条都挂一枚「09:00」只是噪音，
+ * 用户根本分不清它表示什么。真要精确时刻的场景请走待办页的时间编辑。
+ */
+export function scheduleLabel(todo: Todo): string | null {
+  if (todo.dueAt === null) {
+    return null;
+  }
+  const days = overdueDays(todo);
+  if (days > 0) {
+    return `逾期 ${days} 天`;
+  }
+  const today = startOfDay(Date.now());
+  const diff = Math.round((startOfDay(todo.dueAt) - today) / DAY_MS);
+  if (diff === 0) {
+    return '今天';
+  }
+  if (diff === 1) {
+    return '明天';
+  }
+  if (diff === -1) {
+    return '昨天';
+  }
+  const d = new Date(todo.dueAt);
+  return `${d.getMonth() + 1}月${d.getDate()}日`;
 }

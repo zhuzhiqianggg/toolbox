@@ -185,31 +185,41 @@ export function WorkstationDockView(): React.JSX.Element {
         V76：去掉「工作台」标题栏与关闭按钮（用户明确：本来就只有一个工作台，
         这个标题不提供任何信息，却实打实吃掉 36px 高度）。拖动改为时钟区兜底：
         整块带 data-tauri-drag-region，时钟文字块也带一份，按住即可拖窗。
+
+        V77：时钟与日期「看着乱」→ 收敛成左右两组：
+        左 = HH:mm 大号 + 秒（同基线、无底色徽标，不再像一枚贴纸）；
+        右 = 完整日期 + 农历，右对齐单行/两行，字号压到 12/10。
       */}
       <div
         data-tauri-drag-region
-        className="relative flex shrink-0 select-none items-end justify-between gap-2 px-3 pb-2 pt-2.5"
+        className="relative flex shrink-0 select-none items-center justify-between gap-3 px-3.5 pb-2.5 pt-3"
       >
-        <div data-tauri-drag-region className="flex items-baseline gap-1.5">
+        <div data-tauri-drag-region className="flex items-baseline gap-0.5">
           <span
             data-tauri-drag-region
-            className="tabular-nums text-[26px] font-semibold leading-none tracking-tight text-foreground"
+            className="tabular-nums text-[27px] font-semibold leading-none tracking-tight text-foreground"
           >
             {clock.hhmm}
           </span>
           <span
             data-tauri-drag-region
-            className="rounded-md bg-brand-muted px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-brand"
+            className="tabular-nums text-[13px] font-medium leading-none text-muted-foreground/70"
           >
             :{clock.ss}
           </span>
         </div>
-        <div data-tauri-drag-region className="min-w-0 text-right leading-tight">
-          <p data-tauri-drag-region className="truncate text-xs font-medium tabular-nums text-foreground">
+        <div data-tauri-drag-region className="min-w-0 text-right">
+          <p
+            data-tauri-drag-region
+            className="truncate text-[12px] font-medium leading-none tabular-nums text-foreground/90"
+          >
             {dateLabel}
           </p>
           {lunarLabel !== '' ? (
-            <p data-tauri-drag-region className="truncate text-[11px] text-muted-foreground">
+            <p
+              data-tauri-drag-region
+              className="mt-1 truncate text-[10px] leading-none text-muted-foreground/80"
+            >
               {lunarLabel}
             </p>
           ) : null}

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarClock, ChevronDown, ListTodo, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ListTodo, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/toast';
@@ -11,11 +11,12 @@ import { TODO_PRIORITIES, priorityStyle, type Todo, type TodoPatch } from '@/cor
 import { cn } from '@/lib/utils';
 import {
   SCOPE_LABELS,
+  dayLabel,
   defaultMomentOfDay,
-  dueLabel,
   filterTodos,
-  isOverdue,
+  overdueDays,
   relativeDayLabel,
+  scheduleLabel,
   startOfDay,
   type PlanScope,
 } from './planUtils';
@@ -114,7 +115,7 @@ export function PlanPanel({
         // 建完直接展开：紧接着就能补说明，少一次点击
         setExpandedId(created.id);
         toast.success(
-          dueAt === null ? '已添加到「无日期」' : `已添加到 ${relativeDayLabel(anchorMs)} 09:00`,
+          dueAt === null ? '已添加到「无日期」' : `已添加到 ${relativeDayLabel(anchorMs)}`,
         );
       })
       .catch((error: unknown) => {
@@ -145,11 +146,17 @@ export function PlanPanel({
    * 完整的「挂到哪一天」挂在 title 上，鼠标停一下就能看到。
    */
   const addHint =
-    scope === 'undated' ? '写一条不设日期的事，回车即入' : '写一条计划，回车即入（默认 09:00）';
+    scope === 'undated' ? '写一条不设日期的事，回车即入' : '写一条计划，回车即入';
   const addHintTitle =
     scope === 'undated'
       ? '写一条不设日期的事，回车即入'
-      : `写一条并回车，挂到 ${relativeDayLabel(anchorMs)} 09:00`;
+      : `写一条并回车，挂到 ${relativeDayLabel(anchorMs)}`;
+
+  /**
+   * 是否显示排期徽标：当日范围里每条都挂在这一天（标题已经写了「计划 · 今天」），
+   * 再逐条重复「今天」纯属噪音；跨天范围才需要它区分先后。
+   */
+  const showSchedule = scope === 'week' || scope === 'month' || scope === 'all';
 
   /** 行渲染：未完成与已完成共用同一套行组件，先后顺序由上面的分组决定 */
   const renderRow = (todo: Todo): React.JSX.Element => (
@@ -157,6 +164,7 @@ export function PlanPanel({
       key={todo.id}
       todo={todo}
       anchorMs={anchorMs}
+      showSchedule={showSchedule}
       expanded={expandedId === todo.id}
       onToggleExpand={() =>
         setExpandedId((prev: string | null): string | null => (prev === todo.id ? null : todo.id))
@@ -280,6 +288,7 @@ export function PlanPanel({
 function TodoRow({
   todo,
   anchorMs,
+  showSchedule,
   expanded,
   onToggleExpand,
   onToggleDone,
@@ -288,6 +297,8 @@ function TodoRow({
 }: {
   todo: Todo;
   anchorMs: number;
+  /** 是否显示排期徽标（当日范围不显示，避免逐条重复「今天」） */
+  showSchedule: boolean;
   expanded: boolean;
   onToggleExpand: () => void;
   onToggleDone: () => void;
@@ -301,6 +312,12 @@ function TodoRow({
    * 之前直接把 `**重点**` 原样显示，列表里全是星号，stripMarkdown 一并解决。
    */
   const summary: string = useMemo(() => stripMarkdown(todo.detail).trim(), [todo.detail]);
+
+  /** 排期徽标（V77）：逾期 N 天 / 今天 / 明天 / 10月28日，不再显示无意义的「09:00」 */
+  const schedule = scheduleLabel(todo);
+  const overdueDayCount = overdueDays(todo);
+  const overdue = overdueDayCount > 0 && !todo.done;
+  const showBadge = schedule !== null && (overdue || showSchedule);
 
   return (
     <div
@@ -363,30 +380,38 @@ function TodoRow({
           ) : null}
         </button>
 
-        {/* 字号挂在父级：`.md-preview.md-inline` 的 font-size:inherit（双类 0,2,0）
-            会压过同元素的 Tailwind 字号类（单类 0,1,0）—— V73 前标题一直按
-            基础 16px 渲染，这就是「待办字比日历大」的根因；颜色用 ! 保证压过
-            `.md-preview` 的 color 声明 */}
-        <div className="min-w-0 flex-1 text-xs leading-snug">
-          <MdText
-            source={todo.title}
-            inline
-            fallback="未命名"
-            className={cn(
-              todo.done
-                ? '!text-muted-foreground line-through opacity-70'
-                : '!text-foreground',
+        {/*
+          * 标题区：展开时**不再重复画标题**（V77）——
+          * 之前摘要行给自己的标题、编辑器里又给「名称」输入框，同一个标题露两遍，
+          * 用户反馈「点击时不需要重复的两个标题」。展开后标题只在下方「名称」里编辑，
+          这一行退化成状态条（勾选框 + 排期 + 收起箭头）。
+          */}
+        {expanded ? (
+          <span className="min-w-0 flex-1 truncate text-[11px] leading-none text-muted-foreground/60">
+            编辑中
+          </span>
+        ) : (
+          <div className="min-w-0 flex-1 text-xs leading-snug">
+            <MdText
+              source={todo.title}
+              inline
+              fallback="未命名"
+              className={cn(
+                todo.done
+                  ? '!text-muted-foreground line-through opacity-70'
+                  : '!text-foreground',
+              )}
+            />
+            {/* V75 信息密度（用户明确要求）：
+                · 已完成 → 只留标题一行，不再铺摘要（一屏能扫更多条）；
+                · 未完成 → 正文**完整展示**，不再 line-clamp 截断，一眼读得到计划内容。 */}
+            {summary !== '' && !todo.done && (
+              <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-muted-foreground/85">
+                {summary}
+              </p>
             )}
-          />
-          {/* V75 信息密度（用户明确要求）：
-              · 已完成 → 只留标题一行，不再铺摘要（一屏能扫更多条）；
-              · 未完成 → 正文**完整展示**，不再 line-clamp 截断，一眼读得到计划内容。 */}
-          {!expanded && summary !== '' && !todo.done && (
-            <p className="mt-1 whitespace-pre-line text-[11px] leading-relaxed text-muted-foreground/85">
-              {summary}
-            </p>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* 优先级在前、时间在后：优先级是「要不要现在看」的信号，比时间更该先被扫到 */}
         {todo.priority > 1 ? (
@@ -398,17 +423,24 @@ function TodoRow({
           </span>
         ) : null}
 
-        {todo.dueAt !== null ? (
+        {showBadge ? (
           <span
             className={cn(
-              // 时间统一成小胶囊徽标：逾期红底、正常灰底，与日历的节假日徽标同语言
-              'flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] tabular-nums',
-              isOverdue(todo) ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground',
+              // 排期徽标统一成小胶囊：逾期红底加粗、正常灰底，与日历的休/班徽标同语言
+              'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] tabular-nums',
+              overdue
+                ? 'bg-destructive/10 font-medium text-destructive'
+                : 'bg-muted text-muted-foreground',
             )}
-            title={isOverdue(todo) ? `已逾期 · ${dueLabel(todo.dueAt)}` : dueLabel(todo.dueAt)}
+            title={
+              todo.dueAt === null
+                ? ''
+                : overdue
+                  ? `到期日 ${dayLabel(todo.dueAt)}，已经逾期 ${overdueDayCount} 天`
+                  : `到期日 ${dayLabel(todo.dueAt)}`
+            }
           >
-            <CalendarClock className="h-3 w-3" />
-            {dueLabel(todo.dueAt)}
+            {schedule}
           </span>
         ) : null}
 
@@ -503,7 +535,7 @@ function TodoRow({
                 无日期
               </button>
               <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">
-                当前 {todo.dueAt === null ? '无日期' : dueLabel(todo.dueAt)}
+                当前 {todo.dueAt === null ? '无日期' : relativeDayLabel(todo.dueAt)}
               </span>
               <button
                 type="button"
