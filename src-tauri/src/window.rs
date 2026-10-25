@@ -190,10 +190,14 @@ pub fn close_note_window(app: &AppHandle, note_id: &str) -> Result<(), String> {
 /// 工作台停靠窗 label。
 pub const WORKSTATION_LABEL: &str = "workstation";
 
-/// 停靠窗默认宽度（逻辑像素）：贴屏幕右缘、高度占满工作区时的「适合的宽度」。
-const DOCK_DEFAULT_W: f64 = 360.0;
-/// 停靠窗最小尺寸（逻辑像素），与前端紧凑布局的下限对齐。
-const DOCK_MIN_W: f64 = 280.0;
+/// 停靠窗默认宽度（逻辑像素）：V67 双列布局（左日历 / 右计划，计划一眼可见），
+/// 高度占满工作区。旧单列 360 已废弃 —— 存量过窄几何开窗时自动放宽（见下）。
+const DOCK_DEFAULT_W: f64 = 680.0;
+/// 双列布局的判定宽度：存量几何低于此值视为旧单列宽，开窗时提升为默认宽
+/// （保持用户已存的右缘位置对齐，向左扩宽）。
+const DOCK_TWO_COL_MIN_W: f64 = 620.0;
+/// 停靠窗最小尺寸（逻辑像素）：窄于此走前端单列布局。
+const DOCK_MIN_W: f64 = 320.0;
 const DOCK_MIN_H: f64 = 420.0;
 
 /// 读取 `settings.json` → `settings` 对象（缺失时返回空对象）。
@@ -249,7 +253,13 @@ pub fn create_or_show_workstation_dock(app: &AppHandle) -> Result<(), String> {
         .get("workstationDockGeometry")
         .cloned()
         .and_then(|v| serde_json::from_value::<(f64, f64, f64, f64)>(v).ok());
-    let (x, y, w, h) = stored.unwrap_or_else(|| default_dock_geometry(app));
+    let (mut x, y, mut w, h) = stored.unwrap_or_else(|| default_dock_geometry(app));
+    // V67：旧单列（360 宽）存量几何自动放宽为双列默认宽 —— 右缘不动、向左扩宽，
+    // 用户已存的垂直位置 / 高度全部保留
+    if w < DOCK_TWO_COL_MIN_W {
+        x = (x + w - DOCK_DEFAULT_W).max(0.0);
+        w = DOCK_DEFAULT_W;
+    }
 
     WebviewWindowBuilder::new(
         app,

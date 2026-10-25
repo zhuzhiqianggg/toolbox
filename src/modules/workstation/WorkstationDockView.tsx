@@ -12,14 +12,16 @@ import { PlanPanel } from './PlanPanel';
 import { pendingCountByDay, startOfDay, type PlanScope } from './planUtils';
 
 /**
- * 工作台桌面停靠视图（V66 恢复完整功能）。
+ * 工作台桌面停靠视图（V67 双列布局）。
  *
  * 形态：**无边框独立窗、置顶盯住桌面右缘、上下严丝合缝**；Rust 侧配 Mica 透明
  * 材质（Win11 壁纸淡染、失焦不退化），前端只轻铺一层半透明底保证可读。
  *
- * 功能布局（V64 完整版恢复 —— V65 精简版被用户否决）：
- * - 标题栏（拖拽 + 收起）→ 时钟头 → **完整 CalendarPanel**（年月导航 / 农历节日 /
- *   休班角标 / 纪念日管理 / 图例）→ **完整 PlanPanel**（当日 / 本周 / 本月…）；
+ * 功能布局（V64 完整功能 + V67 双列）：
+ * - 时钟头横贯顶部 → **左列完整 CalendarPanel**（年月导航 / 农历节日 / 休班角标 /
+ *   纪念日管理 / 图例），**右列完整 PlanPanel**（当日 / 本周 / 本月…）——
+ *   计划不再被日历压到需要滚动，一眼可见；两列各自独立滚动；
+ * - 窗宽 < 560px 自动回落单列（用户拖窄时保持可用）；
  * - **不放便签**（V65 用户明确要求「便签功能不要搞到工作台里面」）；
  * - 几何持久化到 `settings.workstationDockGeometry`（Rust 开窗直接取用）；
  * - 数据与主窗口完全同源（同一份 SQLite），两边改动实时互通。
@@ -68,6 +70,15 @@ export function WorkstationDockView(): React.JSX.Element {
     const d = new Date(now);
     return `${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]}`;
   }, [now]);
+
+  // —— 双列布局判定（V67）：宽 ≥560 左日历 / 右计划，窄窗回落单列 ——
+  const [windowW, setWindowW] = useState<number>(() => window.innerWidth);
+  useEffect(() => {
+    const onResize = (): void => setWindowW(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const twoCol = windowW >= 560;
   const lunarLabel = useMemo(() => {
     const d = new Date(now);
     const info = dayInfo(d.getFullYear(), d.getMonth() + 1, d.getDate());
@@ -196,19 +207,39 @@ export function WorkstationDockView(): React.JSX.Element {
         </div>
       </div>
 
-      {/* 内容列：日历 → 计划，整列滚动（便签不进停靠窗，见组件注释） */}
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3">
-        <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
-        <PlanPanel
-          todos={todos}
-          anchorMs={anchorMs}
-          scope={scope}
-          onScopeChange={setScope}
-          hideDone={hideDone}
-          onHideDoneChange={setHideDone}
-          focusToken={focusToken}
-        />
-      </div>
+      {/* 内容区（V67 双列）：左日历 / 右计划，各自滚动 —— 计划一眼可见；
+          窗宽不足 560 时回落单列（日历在上、计划在下） */}
+      {twoCol ? (
+        <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3">
+          <div className="scrollbar-thin flex min-h-0 w-[300px] shrink-0 flex-col overflow-y-auto">
+            <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
+          </div>
+          <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto border-l border-border/60 pl-3">
+            <PlanPanel
+              todos={todos}
+              anchorMs={anchorMs}
+              scope={scope}
+              onScopeChange={setScope}
+              hideDone={hideDone}
+              onHideDoneChange={setHideDone}
+              focusToken={focusToken}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3">
+          <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
+          <PlanPanel
+            todos={todos}
+            anchorMs={anchorMs}
+            scope={scope}
+            onScopeChange={setScope}
+            hideDone={hideDone}
+            onHideDoneChange={setHideDone}
+            focusToken={focusToken}
+          />
+        </div>
+      )}
 
       {/* 独立窗口的 toast 渲染器：PlanPanel 添加/勾选的成功与失败提示都走 sonner，
           V66 之前本窗没挂 Toaster，所有提示静默丢失 = 用户看到「回车没反应」 */}
