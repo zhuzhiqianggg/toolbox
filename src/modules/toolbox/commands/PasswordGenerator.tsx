@@ -11,7 +11,9 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/toast';
 import { useCommandShell } from '@/hooks/useCommandShell';
 import {
+  AMBIGUOUS_CHARS,
   DEFAULT_MAX_SYMBOL_RATIO,
+  SIMILAR_CHARS,
   dedupeChars,
   evaluatePasswordStrength,
   generatePassword,
@@ -19,6 +21,7 @@ import {
   isAlphanumeric,
   type GenerateResult,
 } from '@/lib/passwordGen';
+import { strengthColor, strengthText } from '@/lib/passwordStrengthUi';
 import type { CommandProps } from '@/core/types';
 import { cn } from '@/lib/utils';
 import { downloadTextFile, timestampSuffix } from '@/modules/toolbox/lib/download';
@@ -40,13 +43,6 @@ const BASE_SYMBOLS: string = [
   '!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+',
   '[', ']', '{', '}', ';', ':', ',', '.', '<', '>', '?', '/', '~', '`',
   '|', "'", '"', '\\',
-].join('');
-
-/** 易混淆的相似字符（`il1Lo0O`）。 */
-const SIMILAR_CHARS: string = ['i', 'l', '1', 'L', 'o', '0', 'O'].join('');
-/** 视觉模糊 / 易被转义的字符。 */
-const AMBIGUOUS_CHARS: string = [
-  '{', '}', '[', ']', '(', ')', '/', '\\', "'", '"', '`', ',', ';', ':', '.', '<', '>', '|',
 ].join('');
 
 /** 符号安全分组：按使用场景裁剪符号集。 */
@@ -113,34 +109,11 @@ interface Strength {
   /** 0–4：很弱 / 弱 / 中等 / 强 / 极强 */
   score: number;
   label: string;
-  /** 进度条背景色 class */
-  color: string;
   /** 具体改进建议（无建议时给出正向说明） */
   feedback: string[];
   /** 熵（bit） */
   entropy: number;
 }
-
-const STRENGTH_COLORS: readonly string[] = [
-  'bg-red-500',
-  'bg-orange-500',
-  'bg-amber-500',
-  'bg-brand',
-  'bg-emerald-600',
-];
-const STRENGTH_TEXT: readonly string[] = [
-  'text-red-600',
-  'text-orange-600',
-  'text-amber-600',
-  'text-brand',
-  'text-emerald-600',
-];
-
-/** 强度分档 → 进度条 / 圆点配色（评分数值来自 @/lib/passwordGen，配色留在界面层） */
-function strengthColor(score: number): string {
-  return STRENGTH_COLORS[score] ?? 'bg-red-500';
-}
-
 
 /**
  * 密码生成器（对齐 ops-tools 的 PasswordGenerator）：
@@ -329,10 +302,10 @@ export function PasswordGenerator(_props: CommandProps): React.JSX.Element {
   );
 
   /** 首条密码的强度（列表逐条强度单独计算）。 */
-  const strength = React.useMemo<Strength>(() => {
-    const base = evaluatePasswordStrength(passwords[0] ?? '', Math.max(2, pool.length));
-    return { ...base, color: strengthColor(base.score) };
-  }, [passwords, pool.length]);
+  const strength = React.useMemo<Strength>(
+    () => evaluatePasswordStrength(passwords[0] ?? '', Math.max(2, pool.length)),
+    [passwords, pool.length],
+  );
 
   /** 首条密码里是否仍有相邻符号（用于把「不连续」是否真的达成摆在明面上） */
   const adjacentSymbols = React.useMemo<boolean>(
@@ -697,7 +670,7 @@ export function PasswordGenerator(_props: CommandProps): React.JSX.Element {
                 {pool.length === 0 ? (
                   '请至少选择一类字符'
                 ) : (
-                  <span className={cn(STRENGTH_TEXT[strength.score] ?? 'text-foreground')}>
+                  <span className={cn(strengthText(strength.score))}>
                     {strength.label}
                   </span>
                 )}
@@ -709,7 +682,7 @@ export function PasswordGenerator(_props: CommandProps): React.JSX.Element {
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
               <div
-                className={cn('h-full rounded-full transition-all', strength.color)}
+                className={cn('h-full rounded-full transition-all', strengthColor(strength.score))}
                 style={{ width: `${pool.length === 0 ? 0 : (strength.score + 1) * 20}%` }}
               />
             </div>

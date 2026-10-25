@@ -30,6 +30,14 @@ export const DIGIT_CHARS = '0123456789';
 /** 默认符号表（密码库使用；工具箱另有自己的分组裁剪逻辑） */
 export const DEFAULT_SYMBOL_CHARS = '!@#$%^&*()-_=+[]{};:,.?/~';
 
+/** 易混淆的相似字符（`il1Lo0O`），供「排除相似字符」选项使用 */
+export const SIMILAR_CHARS: string = 'il1Lo0O';
+
+/** 视觉模糊 / 易被转义的字符，供「排除模糊字符」选项使用 */
+export const AMBIGUOUS_CHARS: string = [
+  '{', '}', '[', ']', '(', ')', '/', '\\', "'", '"', '`', ',', ';', ':', '.', '<', '>', '|',
+].join('');
+
 /**
  * 默认最大符号占比。
  *

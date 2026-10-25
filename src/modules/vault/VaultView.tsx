@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ChevronDown,
   Copy,
   Eye,
   EyeOff,
@@ -7,6 +8,7 @@ import {
   Lock,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   ShieldCheck,
   Sparkles,
@@ -14,6 +16,8 @@ import {
 } from 'lucide-react';
 import { copyText } from '@/lib/clipboard';
 import { toast } from '@/components/ui/toast';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -22,7 +26,21 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { generateStrongPassword } from '@/lib/passwordGen';
+import { usePersistedState } from '@/hooks/usePersistedState';
+import {
+  AMBIGUOUS_CHARS,
+  DEFAULT_MAX_SYMBOL_RATIO,
+  DEFAULT_SYMBOL_CHARS,
+  DIGIT_CHARS,
+  LOWER_CHARS,
+  SIMILAR_CHARS,
+  UPPER_CHARS,
+  dedupeChars,
+  evaluatePasswordStrength,
+  generatePassword,
+  isAlphanumeric,
+} from '@/lib/passwordGen';
+import { strengthColor, strengthText } from '@/lib/passwordStrengthUi';
 import {
   VAULT_CATEGORIES,
   categoryLabel,
@@ -805,97 +823,97 @@ function VaultItemDialog(props: VaultItemDialogProps): React.JSX.Element {
           </DialogDescription>
         </DialogHeader>
 
-        {/* 类别选择（仅新增时可选） */}
-        {!state.editing && (
-          <div className="flex gap-1.5">
-            {VAULT_CATEGORIES.map((meta) => (
-              <button
-                key={meta.id}
-                type="button"
-                onClick={() => onChange({ ...state, category: meta.id })}
-                className={cn(
-                  'flex-1 rounded-md border px-2 py-1.5 text-xs transition',
-                  state.category === meta.id
-                    ? 'border-brand bg-brand-muted/60 font-medium text-brand'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                )}
-              >
-                {meta.label}
-              </button>
-            ))}
+        <form
+          className="flex flex-col gap-2.5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            save();
+          }}
+        >
+          {/* 类别选择（仅新增时可选） */}
+          {!state.editing && (
+            <div className="flex gap-1.5">
+              {VAULT_CATEGORIES.map((meta) => (
+                <button
+                  key={meta.id}
+                  type="button"
+                  onClick={() => onChange({ ...state, category: meta.id })}
+                  className={cn(
+                    'flex-1 rounded-md border px-2 py-1.5 text-xs transition',
+                    state.category === meta.id
+                      ? 'border-brand bg-brand-muted/60 font-medium text-brand'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                  )}
+                >
+                  {meta.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2.5">
+            <LabeledInput label="标题" value={state.title} onChange={(v) => onChange({ ...state, title: v })} />
+            {isLogin && (
+              <LabeledInput
+                label="用户名"
+                value={state.username}
+                onChange={(v) => onChange({ ...state, username: v })}
+              />
+            )}
+            {isLogin ? (
+              // 登录类：明文切换 + 实时强度 + 内嵌迷你生成器（与工具箱密码生成器同一套核心）
+              <SecretField label="密码" value={state.secret} onChange={(v) => onChange({ ...state, secret: v })} />
+            ) : (
+              <LabeledInput
+                label={secretLabel}
+                value={state.secret}
+                onChange={(v) => onChange({ ...state, secret: v })}
+                multiline
+                placeholder={state.category === 'note' ? '安全笔记正文' : undefined}
+              />
+            )}
+            {isLogin && (
+              <LabeledInput
+                label="网址"
+                value={state.url}
+                onChange={(v) => onChange({ ...state, url: v })}
+                placeholder="https://"
+              />
+            )}
+            {state.category !== 'note' && (
+              <LabeledInput
+                label="备注"
+                value={state.notes}
+                onChange={(v) => onChange({ ...state, notes: v })}
+                multiline
+              />
+            )}
           </div>
-        )}
 
-        <div className="flex flex-col gap-2.5">
-          <LabeledInput label="标题" value={state.title} onChange={(v) => onChange({ ...state, title: v })} />
-          {isLogin && (
-            <LabeledInput
-              label="用户名"
-              value={state.username}
-              onChange={(v) => onChange({ ...state, username: v })}
-            />
+          {error && (
+            <p className="rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
+              {error}
+            </p>
           )}
-          <LabeledInput
-            label={secretLabel}
-            value={state.secret}
-            onChange={(v) => onChange({ ...state, secret: v })}
-            type="password"
-            multiline={state.category !== 'login'}
-            placeholder={state.category === 'note' ? '安全笔记正文' : undefined}
-            action={
-              state.category === 'login'
-                ? {
-                    // 与工具箱「密码生成器」同源的安全实现（crypto + 拒绝采样，
-                    // 四类字符各至少一次、首尾为字母）
-                    label: '生成密码',
-                    icon: <Sparkles className="h-3 w-3" />,
-                    onClick: () => onChange({ ...state, secret: generateStrongPassword(20) }),
-                  }
-                : undefined
-            }
-          />
-          {isLogin && (
-            <LabeledInput
-              label="网址"
-              value={state.url}
-              onChange={(v) => onChange({ ...state, url: v })}
-              placeholder="https://"
-            />
-          )}
-          {state.category !== 'note' && (
-            <LabeledInput
-              label="备注"
-              value={state.notes}
-              onChange={(v) => onChange({ ...state, notes: v })}
-              multiline
-            />
-          )}
-        </div>
 
-        {error && (
-          <p className="rounded-md border border-destructive/30 bg-destructive/5 px-2.5 py-1.5 text-xs text-destructive">
-            {error}
-          </p>
-        )}
-
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={close}
-            disabled={busy}
-            className="h-8 rounded-md border px-3 text-xs text-muted-foreground transition hover:bg-accent disabled:opacity-60"
-          >
-            取消
-          </button>
-          <button
-            type="button"
-            onClick={save}
-            disabled={busy}
-            className="h-8 rounded-md bg-brand px-3 text-xs font-medium text-white transition hover:bg-brand/90 disabled:opacity-60"
-          >
-            {busy ? '保存中…' : '保存'}
-          </button>
-        </div>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={close}
+              disabled={busy}
+              className="h-8 rounded-md border px-3 text-xs text-muted-foreground transition hover:bg-accent disabled:opacity-60"
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              disabled={busy}
+              className="h-8 rounded-md bg-brand px-3 text-xs font-medium text-white transition hover:bg-brand/90 disabled:opacity-60"
+            >
+              {busy ? '保存中…' : '保存'}
+            </button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
@@ -907,36 +925,17 @@ interface LabeledInputProps {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  type?: 'text' | 'password';
   multiline?: boolean;
   placeholder?: string;
-  /** 标签行右侧的小动作按钮（如「生成密码」） */
-  action?: { label: string; icon?: React.ReactNode; onClick: () => void };
 }
 
 function LabeledInput(props: LabeledInputProps): React.JSX.Element {
-  const { label, value, onChange, type = 'text', multiline = false, placeholder, action } = props;
+  const { label, value, onChange, multiline = false, placeholder } = props;
   const shared =
     'w-full rounded-md border bg-transparent px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-brand';
   return (
     <label className="flex flex-col gap-1">
-      <span className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">{label}</span>
-        {action ? (
-          <button
-            type="button"
-            onClick={(event) => {
-              // 阻止 label 默认行为，避免按钮点击把焦点甩回输入框
-              event.preventDefault();
-              action.onClick();
-            }}
-            className="ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-brand transition hover:bg-brand-muted"
-          >
-            {action.icon}
-            {action.label}
-          </button>
-        ) : null}
-      </span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       {multiline ? (
         <textarea
           value={value}
@@ -947,13 +946,281 @@ function LabeledInput(props: LabeledInputProps): React.JSX.Element {
         />
       ) : (
         <input
-          type={type}
+          type="text"
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
-          className={cn(shared, 'h-9', type === 'password' && 'font-mono')}
+          className={cn(shared, 'h-9')}
         />
       )}
     </label>
+  );
+}
+
+// —— 机密输入（登录类）：明文切换 + 实时强度 + 内嵌迷你生成器 ——
+
+/** 迷你生成器选项的持久化键（只存选项，绝不存生成结果） */
+const SECRET_GEN_KEY = 'vault-secret-gen';
+
+/** 迷你生成器的字符分类（密码生成器工具的精简版，核心同源） */
+const SECRET_GEN_SETS = [
+  { id: 'upper', label: '大写 A-Z', chars: UPPER_CHARS },
+  { id: 'lower', label: '小写 a-z', chars: LOWER_CHARS },
+  { id: 'digit', label: '数字 0-9', chars: DIGIT_CHARS },
+  { id: 'symbol', label: '符号', chars: DEFAULT_SYMBOL_CHARS },
+] as const;
+
+type SecretGenSetId = (typeof SECRET_GEN_SETS)[number]['id'];
+
+/** 从字符池中剔除黑名单字符（保持顺序） */
+function excludeBanned(source: string, banned: string): string {
+  return source
+    .split('')
+    .filter((char) => !banned.includes(char))
+    .join('');
+}
+
+interface SecretFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+/**
+ * 登录类机密输入框。
+ *
+ * V69：此前是 `type="password"` 的圆点框——生成 20 位随机密码后用户**根本看不到
+ * 生成了什么**，手动输入也无法核对（用户：「生成的密码不能看」）。现在：
+ * ①右侧眼睛随时切换明文 / 圆点；②下方实时强度条（手动输入同样受益）；
+ * ③「生成密码」展开内嵌迷你生成器：长度、字符集、排除易混淆字符可调，
+ * 实时预览 + 强度，满意再「填入」。生成核心与工具箱密码生成器同一份
+ * （crypto + 拒绝采样、符号不连排、首尾字母）。
+ */
+function SecretField({ label, value, onChange }: SecretFieldProps): React.JSX.Element {
+  const [visible, setVisible] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <button
+          type="button"
+          onClick={() => setPanelOpen((open) => !open)}
+          aria-expanded={panelOpen}
+          className="ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-brand transition hover:bg-brand-muted"
+        >
+          <Sparkles className="h-3 w-3" />
+          生成密码
+          <ChevronDown
+            className={cn('h-3 w-3 transition-transform', panelOpen && 'rotate-180')}
+          />
+        </button>
+      </span>
+      <div className="relative">
+        <input
+          type={visible ? 'text' : 'password'}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          autoComplete="new-password"
+          spellCheck={false}
+          className="h-9 w-full rounded-md border bg-transparent pl-2.5 pr-8 font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-1 focus:ring-brand"
+        />
+        <button
+          type="button"
+          title={visible ? '隐藏密码' : '查看密码'}
+          aria-label={visible ? '隐藏密码' : '查看密码'}
+          onClick={() => setVisible((state) => !state)}
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+        >
+          {visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+        </button>
+      </div>
+      <StrengthBar password={value} />
+      {panelOpen && (
+        <SecretGenPanel
+          onUse={(password) => {
+            onChange(password);
+            setVisible(true); // 填入即展示，让用户确认生成内容
+            setPanelOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** 实时强度条：5 档配色 + 档位文案 + 熵值（密码为空时不渲染） */
+function StrengthBar({ password, poolSize = 94 }: { password: string; poolSize?: number }): React.JSX.Element | null {
+  if (password.length === 0) {
+    return null;
+  }
+  const strength = evaluatePasswordStrength(password, Math.max(2, poolSize));
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="h-1 overflow-hidden rounded-full bg-muted">
+        <div
+          className={cn('h-full rounded-full transition-all', strengthColor(strength.score))}
+          style={{ width: `${(strength.score + 1) * 20}%` }}
+        />
+      </div>
+      <p className="text-[10px] leading-none">
+        <span className={cn('font-medium', strengthText(strength.score))}>{strength.label}</span>
+        <span className="ml-1.5 text-muted-foreground">约 {Math.round(strength.entropy)} bit 熵</span>
+      </p>
+    </div>
+  );
+}
+
+/**
+ * 内嵌迷你密码生成器（密码库弹窗版）。
+ *
+ * 与工具箱「密码生成器」共用 `@/lib/passwordGen` 的生成核心，只保留高频选项：
+ * 长度 / 四类字符 / 排除相似与模糊字符；符号占比 25% 上限、符号不连排、
+ * 首尾字母为固定安全默认值。选项经 usePersistedState 记住，生成结果不落盘。
+ */
+function SecretGenPanel({ onUse }: { onUse: (password: string) => void }): React.JSX.Element {
+  const [length, setLength] = usePersistedState<number>(SECRET_GEN_KEY, 'length', 16);
+  const [sets, setSets] = usePersistedState<Record<SecretGenSetId, boolean>>(SECRET_GEN_KEY, 'sets', {
+    upper: true,
+    lower: true,
+    digit: true,
+    symbol: true,
+  });
+  const [excludeSimilar, setExcludeSimilar] = usePersistedState<boolean>(SECRET_GEN_KEY, 'excludeSimilar', true);
+  const [excludeAmbiguous, setExcludeAmbiguous] = usePersistedState<boolean>(SECRET_GEN_KEY, 'excludeAmbiguous', false);
+  const [nonce, setNonce] = useState(0);
+
+  /** 按选项构建字符池并生成一条预览（nonce 变化触发换一个） */
+  const { password, poolSize } = useMemo(() => {
+    let base = SECRET_GEN_SETS.filter((set) => sets[set.id])
+      .map((set) => set.chars)
+      .join('');
+    if (excludeSimilar) {
+      base = excludeBanned(base, SIMILAR_CHARS);
+    }
+    if (excludeAmbiguous) {
+      base = excludeBanned(base, AMBIGUOUS_CHARS);
+    }
+    const pool = dedupeChars(base);
+    if (pool.length === 0) {
+      return { password: '', poolSize: 0 };
+    }
+    const requiredSets = SECRET_GEN_SETS.filter((set) => sets[set.id])
+      .map((set) =>
+        pool
+          .split('')
+          .filter((char) => set.chars.includes(char))
+          .join(''),
+      )
+      .filter((chars) => chars.length > 0);
+    const result = generatePassword({
+      length,
+      pool,
+      requiredSets,
+      nonSymbols: pool.split('').filter(isAlphanumeric).join(''),
+      symbols: DEFAULT_SYMBOL_CHARS,
+      maxSymbolRatio: DEFAULT_MAX_SYMBOL_RATIO,
+      edgeLetter: true,
+      separateSymbols: true,
+    });
+    return { password: result.password, poolSize: pool.length };
+  }, [length, sets, excludeSimilar, excludeAmbiguous, nonce]);
+
+  return (
+    <div className="flex flex-col gap-2.5 rounded-lg border border-brand/25 bg-brand-muted/30 p-3">
+      {/* 长度 */}
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-xs text-muted-foreground">长度</span>
+        <Slider
+          min={8}
+          max={64}
+          step={1}
+          value={[length]}
+          onValueChange={(values) => {
+            const next = values[0];
+            if (typeof next === 'number') {
+              setLength(next);
+            }
+          }}
+          aria-label="密码长度"
+        />
+        <span className="w-7 shrink-0 text-right font-mono text-xs text-brand">{length}</span>
+      </div>
+
+      {/* 字符集 */}
+      <div className="grid grid-cols-2 gap-1.5">
+        {SECRET_GEN_SETS.map((set) => (
+          <label
+            key={set.id}
+            className="flex items-center justify-between gap-1.5 rounded-md border border-border bg-card px-2 py-1"
+          >
+            <span className="truncate text-xs text-foreground">{set.label}</span>
+            <Switch
+              checked={sets[set.id]}
+              onCheckedChange={(checked) => {
+                setSets((current) => {
+                  const next = { ...current, [set.id]: checked === true };
+                  // 至少保留一类字符
+                  return Object.values(next).some(Boolean) ? next : current;
+                });
+              }}
+              aria-label={set.label}
+            />
+          </label>
+        ))}
+      </div>
+
+      {/* 排除项 */}
+      <div className="grid grid-cols-2 gap-1.5">
+        <label className="flex items-center justify-between gap-1.5 rounded-md border border-border bg-card px-2 py-1">
+          <span className="truncate text-xs text-foreground">
+            排除相似
+            <span className="ml-1 font-mono text-[10px] text-muted-foreground">{SIMILAR_CHARS}</span>
+          </span>
+          <Switch
+            checked={excludeSimilar}
+            onCheckedChange={(checked) => setExcludeSimilar(checked === true)}
+            aria-label="排除相似字符"
+          />
+        </label>
+        <label className="flex items-center justify-between gap-1.5 rounded-md border border-border bg-card px-2 py-1">
+          <span className="truncate text-xs text-foreground">排除模糊字符</span>
+          <Switch
+            checked={excludeAmbiguous}
+            onCheckedChange={(checked) => setExcludeAmbiguous(checked === true)}
+            aria-label="排除模糊字符"
+          />
+        </label>
+      </div>
+
+      {/* 预览 + 换一个 */}
+      <div className="flex items-start gap-1.5 rounded-md border border-border bg-card px-2 py-1.5">
+        <code className="scrollbar-thin min-w-0 flex-1 break-all font-mono text-xs text-foreground">
+          {password || '请至少勾选一类字符'}
+        </code>
+        <button
+          type="button"
+          title="换一个"
+          aria-label="换一个"
+          disabled={poolSize === 0}
+          onClick={() => setNonce((value) => value + 1)}
+          className="shrink-0 rounded p-1 text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:opacity-50"
+        >
+          <RefreshCw className="h-3 w-3" />
+        </button>
+      </div>
+      <StrengthBar password={password} poolSize={poolSize} />
+
+      {/* 填入 */}
+      <button
+        type="button"
+        disabled={password.length === 0}
+        onClick={() => onUse(password)}
+        className="h-8 shrink-0 rounded-md bg-brand text-xs font-medium text-white transition hover:bg-brand/90 disabled:opacity-60"
+      >
+        填入
+      </button>
+    </div>
   );
 }
