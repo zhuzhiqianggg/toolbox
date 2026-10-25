@@ -223,7 +223,7 @@ export function CalendarPanel({ anchorMs, onSelect, pendingByDay }: CalendarPane
               <span className="flex w-full items-baseline justify-center gap-0.5 leading-none">
                 <span
                   className={cn(
-                    'tabular-nums text-xs font-medium',
+                    'tabular-nums text-[13px] font-medium',
                     isOff && !isSelected && 'text-destructive',
                   )}
                 >
@@ -244,7 +244,7 @@ export function CalendarPanel({ anchorMs, onSelect, pendingByDay }: CalendarPane
               {/* 第二行：农历 / 节气 / 节日（节日与节气配色区分） */}
               <span
                 className={cn(
-                  'w-full truncate text-center text-[9px] leading-none',
+                  'w-full truncate text-center text-[10px] leading-none',
                   isSelected
                     ? 'text-brand-foreground/85'
                     : festival !== null

@@ -305,7 +305,7 @@ function TodoRow({
   return (
     <div
       className={cn(
-        'rounded-xl border transition',
+        'rounded-lg border transition',
         expanded
           ? 'border-brand/40 bg-brand-muted/25'
           : 'border-transparent hover:border-border hover:bg-accent/40',
@@ -322,7 +322,7 @@ function TodoRow({
             onToggleExpand();
           }
         }}
-        className="group flex cursor-pointer items-center gap-2.5 px-2.5 py-2"
+        className="group flex cursor-pointer items-center gap-2.5 px-2 py-1.5"
       >
         <button
           type="button"
@@ -359,7 +359,7 @@ function TodoRow({
             inline
             fallback="未命名"
             className={cn(
-              'text-sm',
+              'text-[13px] leading-snug',
               todo.done ? 'text-muted-foreground line-through opacity-70' : 'text-foreground',
             )}
           />
@@ -415,7 +415,7 @@ function TodoRow({
               placeholder="任务名称"
               singleLine
               onEnter={onToggleExpand}
-              className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm"
+              className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-[13px]"
               ariaLabel="任务名称"
             />
           </div>
@@ -429,7 +429,7 @@ function TodoRow({
               value={todo.detail}
               onChange={(next: string) => onPatch({ detail: next })}
               placeholder="补充说明：步骤、链接、清单…（**加粗**、- 列表、`代码` 都会立刻渲染）"
-              className="min-h-[76px] rounded-lg border border-border bg-background px-2.5 py-2 text-sm text-muted-foreground"
+              className="min-h-[64px] rounded-lg border border-border bg-background px-2.5 py-2 text-[13px]"
               ariaLabel="任务说明"
             />
           </div>

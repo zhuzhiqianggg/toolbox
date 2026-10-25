@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App, { type WindowRoot } from './App';
 import { bootstrap, bootstrapSync } from './core/bootstrap';
+import { openTarget } from './core/navigation';
 import { useAppStore } from './stores/useAppStore';
 import { diagLog } from '@/lib/diag';
 import { ipc } from '@/lib/ipc';
@@ -174,6 +175,20 @@ function start(): void {
     .catch(() => {
       /* 浏览器环境无 Tauri IPC，忽略 */
     });
+
+  // 停靠工作台「快捷入口」跨窗导航（V72）：dock 点按钮 → 全局事件 → 主窗切换视图。
+  // 仅主窗监听；payload 解析与 openTarget 一致（module:<id> / settings / 命令 id）。
+  if (target.windowRoot === 'main') {
+    void import('@tauri-apps/api/event')
+      .then(({ listen }) =>
+        listen<string>('toolbox:navigate', (event) => {
+          openTarget(event.payload);
+        }),
+      )
+      .catch(() => {
+        /* 浏览器环境无 Tauri IPC，忽略 */
+      });
+  }
 }
 
 start();
