@@ -79,9 +79,10 @@ export function WorkstationDockView(): React.JSX.Element {
   }, []);
 
   const clock = useMemo(() => clockOf(now), [now]);
+  // V81：日期不再带年份（日历块头部已有「2026 年 10 月」，顶栏重复一遍只添噪音）
   const dateLabel = useMemo(() => {
     const d = new Date(now);
-    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]}`;
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAYS[d.getDay()]}`;
   }, [now]);
 
   // —— 双列布局判定（V78）：宽 ≥660 左计划 / 右日历，窄窗回落单列 ——
@@ -198,17 +199,17 @@ export function WorkstationDockView(): React.JSX.Element {
         className="relative flex shrink-0 select-none items-center justify-between gap-3 px-3 pb-2 pt-3"
       >
         <div data-tauri-drag-region className="flex items-baseline">
+          {/* V81：秒不再缩小一号 —— 与 HH:mm 同字号、以浅色区分（用户口径：
+              「设成一样大小，然后用不同的颜色来表示」，读起来才是一个完整的时刻） */}
           <span
             data-tauri-drag-region
             className="tabular-nums text-[27px] font-semibold leading-none tracking-tight text-foreground"
           >
             {clock.hhmm}
           </span>
-          {/* 冒号跟着秒一起缩小、且**不留 gap** —— V77 用了 gap-0.5，渲染成「21:02 :49」，
-              读起来像两个独立的数；现在紧贴分位，视觉上是一个 21:02:49 的整体 */}
           <span
             data-tauri-drag-region
-            className="tabular-nums text-[13px] font-medium leading-none text-muted-foreground/70"
+            className="tabular-nums text-[27px] font-semibold leading-none tracking-tight text-muted-foreground/45"
           >
             :{clock.ss}
           </span>
@@ -233,9 +234,9 @@ export function WorkstationDockView(): React.JSX.Element {
         <span className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-brand/25 to-transparent" />
       </div>
 
-      {/* 内容区（V68 双列，V71 等高撑满）：左计划（主操作区）/ 右日历。
-          面板经 h-full 撑满列高、各自内部滚动 —— 不再出现「内容少时面板缩短、
-          底下留一大片裸 Mica」的失衡观感；窗宽不足 560 时回落单列（计划在上、日历在下） */}
+      {/* 内容区（V81 等宽双列）：左计划 / 右日历各占一半 —— V78 之前右列固定 320px，
+          左右差着 200 多像素，用户直评「整体怪怪的、日历框和待办框等宽更好看」。
+          两个 flex-1（basis 0）严格均分，日历格随宽度自然变大 */}
       {twoCol ? (
         <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3">
           <div className="flex min-h-0 flex-1 flex-col">
@@ -249,13 +250,16 @@ export function WorkstationDockView(): React.JSX.Element {
               focusToken={focusToken}
             />
           </div>
-          <div className="flex min-h-0 w-[320px] shrink-0 flex-col gap-2">
+          <div className="flex min-h-0 flex-1 flex-col gap-2">
             <div className="flex min-h-0 flex-1 flex-col">
-              <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
+              {/* 停靠窗只读：生日与纪念日统一回主界面工作台配置（V81） */}
+              <CalendarPanel
+                anchorMs={anchorMs}
+                onSelect={handleSelectDay}
+                pendingByDay={pendingByDay}
+                anniversariesEditable={false}
+              />
             </div>
-            {/* V72：主窗同款快捷入口（应用跳转跨窗直达；系统面板动作本地执行）
-                V80：去掉列间那条 border-l + pl-3 —— 两块面板各自已有 1px 边框，
-                再叠一条竖线就是两条平行的线，既脏又白吃 12px 宽度（快捷栏因此横向溢出 4px） */}
             <QuickActionsRail variant="dock" onNavigate={dockNavigate} />
           </div>
         </div>
@@ -274,7 +278,12 @@ export function WorkstationDockView(): React.JSX.Element {
             />
           </div>
           <div className="flex shrink-0 flex-col gap-2">
-            <CalendarPanel anchorMs={anchorMs} onSelect={handleSelectDay} pendingByDay={pendingByDay} />
+            <CalendarPanel
+              anchorMs={anchorMs}
+              onSelect={handleSelectDay}
+              pendingByDay={pendingByDay}
+              anniversariesEditable={false}
+            />
             <QuickActionsRail variant="dock" onNavigate={dockNavigate} />
           </div>
         </div>

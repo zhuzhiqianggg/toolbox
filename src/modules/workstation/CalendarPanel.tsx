@@ -58,12 +58,23 @@ export interface CalendarPanelProps {
   onSelect: (dayMs: number) => void;
   /** 每天的未完成待办数（键为当天零点毫秒） */
   pendingByDay: ReadonlyMap<number, number>;
+  /**
+   * 生日与纪念日是否可增删（V81）：主界面工作台保持默认 true；
+   * 桌面停靠窗传 false —— 那里只做展示，配置统一回主界面（用户口径）。
+   */
+  anniversariesEditable?: boolean;
 }
 
 /** 星期表头（周一开始，与 startOfWeek 一致） */
 const WEEKDAY_HEADERS: readonly string[] = ['一', '二', '三', '四', '五', '六', '日'];
 
-export function CalendarPanel({ anchorMs, onSelect, pendingByDay }: CalendarPanelProps): React.JSX.Element {
+export function CalendarPanel({
+  anchorMs,
+  onSelect,
+  pendingByDay,
+  anniversariesEditable = true,
+}: CalendarPanelProps): React.JSX.Element {
+  const editable = anniversariesEditable;
   const anchorDate = useMemo(() => new Date(anchorMs), [anchorMs]);
   /** 当前展示的月份（与选中日期解耦，允许翻月浏览后仍保留选中） */
   const [view, setView] = useState<{ year: number; month: number }>(() => ({
@@ -209,15 +220,15 @@ export function CalendarPanel({ anchorMs, onSelect, pendingByDay }: CalendarPane
   const gz = ganZhi(view.year);
 
   return (
-    <section className="scrollbar-thin flex h-full min-h-0 flex-col gap-2.5 overflow-y-auto rounded-xl border border-border bg-card p-3 shadow-panel">
-      {/* V76 头部两行：月份 + 翻页；干支 / 下一个假期下移一行，
-          避免 320 宽的停靠窗里「2026 年 10 月」被挤成两行 */}
-      <header className="flex shrink-0 flex-col gap-1">
+    <section className="scrollbar-thin flex h-full min-h-0 flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-card p-2.5 shadow-panel">
+      {/* V81 区块化：头部 / 网格 / 纪念日各自成「方块」（浅底或细边框圆角块），
+          面板不再是一锅平铺的散件 —— 用户口径「每个部分设成方块」 */}
+      <header className="shrink-0 rounded-lg bg-muted/40 px-2.5 py-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-muted text-brand">
-            <CalendarDays className="h-4 w-4" />
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-card text-brand ring-1 ring-inset ring-brand/20">
+            <CalendarDays className="h-3.5 w-3.5" />
           </span>
-          <h3 className="whitespace-nowrap text-sm font-semibold tabular-nums text-foreground">
+          <h3 className="whitespace-nowrap text-[13px] font-semibold tabular-nums text-foreground">
             {view.year} 年 {view.month + 1} 月
           </h3>
           <div className="ml-auto flex items-center gap-0.5">
@@ -237,10 +248,8 @@ export function CalendarPanel({ anchorMs, onSelect, pendingByDay }: CalendarPane
             </Button>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-[10px] leading-none text-muted-foreground">
-          <span className="rounded bg-muted px-1.5 py-0.5">
-            {gz.ganZhi}年 · 属{gz.zodiac}
-          </span>
+        <div className="mt-1.5 flex items-center gap-2 text-[10px] leading-none text-muted-foreground">
+          <span>{gz.ganZhi}年 · 属{gz.zodiac}</span>
           {nextHolidays[0] !== undefined ? (
             <span className="ml-auto truncate text-muted-foreground/80">
               假期 {nextHolidays[0].name}
@@ -250,23 +259,22 @@ export function CalendarPanel({ anchorMs, onSelect, pendingByDay }: CalendarPane
         </div>
       </header>
 
-      <div className="grid grid-cols-7 gap-1.5 text-center text-[11px] text-muted-foreground">
-        {WEEKDAY_HEADERS.map((label) => (
-          <span key={label} className="pb-0.5">
-            {label}
-          </span>
-        ))}
-      </div>
-
       {/*
-        * 42 格固定网格：每格两行（公历日 / 农历+休班），行高固定保证翻月不跳动。
+        * 日历块：星期头 + 42 格 + 图例收进同一个细边框圆角块。
         *
         * ⚠️ V23：`flex-1` 只在 `lg`（两栏并排）下加。
         * 窄窗口下这里是单栏，面板高度由内容决定；此时若还挂 `flex-1`
         * （`flex-basis: 0%`），浏览器会把 6 行日历压进「剩余高度」里，
         * 结果就是**月末两周被裁掉**（V23 无头实测在 680px 宽复现：日历只显示到 20 号）。
         */}
-      <div className="grid grid-cols-7 gap-1.5 lg:flex-1">
+      <div className="flex min-h-0 flex-col rounded-lg border border-border/60 bg-background/30 p-1.5 lg:flex-1">
+        <div className="grid shrink-0 grid-cols-7 gap-1 pb-1 text-center text-[10px] font-medium text-muted-foreground/80">
+          {WEEKDAY_HEADERS.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1 lg:flex-1">
         {cells.map((dayMs) => {
           const date = new Date(dayMs);
           const inMonth = date.getMonth() === view.month && date.getFullYear() === view.year;
@@ -366,47 +374,55 @@ export function CalendarPanel({ anchorMs, onSelect, pendingByDay }: CalendarPane
             </button>
           );
         })}
+        </div>
+
+        {/* 图例收进日历块底部（细分隔线隔开） */}
+        <div className="mt-1.5 flex shrink-0 flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-border/50 px-1 pt-1.5 text-[10px] text-muted-foreground/80">
+          <span className="inline-flex items-center gap-1">
+            <span className="rounded bg-destructive/15 px-1 text-destructive">休</span>放假
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="rounded bg-muted px-1">班</span>调休上班
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="font-medium text-destructive">红字</span>节日
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="font-medium text-sky-600">青字</span>节气
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Cake className="h-2.5 w-2.5 text-pink-500" />
+            生日 / 纪念日
+          </span>
+        </div>
       </div>
 
-      {/* 图例（下一个假期已上移到头部第二行，这里只留图例） */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">
-        <span className="inline-flex items-center gap-1">
-          <span className="rounded bg-destructive/15 px-1 text-destructive">休</span>放假
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="rounded bg-muted px-1">班</span>调休上班
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="font-medium text-destructive">红字</span>节日
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="font-medium text-sky-600">青字</span>节气
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Cake className="h-2.5 w-2.5 text-pink-500" />
-          生日 / 纪念日
-        </span>
-      </div>
-
-      {/* 生日与纪念日（V76：单入口，靠「类型 + 历法」区分，不再拆成两个功能） */}
-      <div className="rounded-lg border border-border/70 bg-card/50">
+      {/* 生日与纪念日（V81：区块化浅底块；主界面可增删，停靠窗只读展示） */}
+      <div className="shrink-0 rounded-lg bg-muted/40">
         <button
           type="button"
           onClick={() => setShowAnniversaries((prev) => !prev)}
-          className="flex w-full items-center gap-2 px-2.5 py-2 text-left text-[11px] text-muted-foreground transition hover:bg-accent/40"
+          className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] transition hover:bg-accent/40"
         >
           <Gift className="h-3.5 w-3.5 text-violet-500" />
           <span className="font-medium text-foreground">生日与纪念日</span>
-          <span className="text-[10px]">
+          <span className="text-[10px] text-muted-foreground">
             {anniversaries.length > 0 ? `${anniversaries.length} 条` : '还没有记录'}
           </span>
+          {!editable ? (
+            <span className="rounded bg-muted px-1 py-0.5 text-[9px] text-muted-foreground/70">
+              主界面配置
+            </span>
+          ) : null}
           <ChevronDown
-            className={cn('ml-auto h-3.5 w-3.5 transition', showAnniversaries && 'rotate-180')}
+            className={cn('ml-auto h-3.5 w-3.5 text-muted-foreground transition', showAnniversaries && 'rotate-180')}
           />
         </button>
 
         {showAnniversaries ? (
           <div className="space-y-2 border-t border-border/70 p-2.5">
+            {editable ? (
+              <>
             {/* 两者区别直接写在表单上，避免用户猜 */}
             <p className="text-[10px] leading-relaxed text-muted-foreground/75">
               生日 = 按人记录，支持农历，每年自动换算到公历；纪念日 = 按事件记录，可每年或仅一次。
@@ -521,10 +537,19 @@ export function CalendarPanel({ anchorMs, onSelect, pendingByDay }: CalendarPane
                 添加
               </Button>
             </div>
+              </>
+            ) : (
+              /* V81：停靠窗只读 —— 不出表单，指回主界面 */
+              <p className="text-[10px] leading-relaxed text-muted-foreground/70">
+                在主界面「工作台」的日历面板里添加或删除；这里仅展示。
+              </p>
+            )}
 
             {anniversaries.length === 0 ? (
               <p className="text-[10px] leading-relaxed text-muted-foreground/70">
-                公历日期留空 = 用日历上选中的那天；农历请完整填写年月日（如 1988-10-13）。
+                {editable
+                  ? '公历日期留空 = 用日历上选中的那天；农历请完整填写年月日（如 1988-10-13）。'
+                  : '还没有记录，去主界面「工作台」添加一条吧。'}
               </p>
             ) : (
               <ul className="space-y-1.5">
@@ -571,14 +596,16 @@ export function CalendarPanel({ anchorMs, onSelect, pendingByDay }: CalendarPane
                           {solarText !== '' ? ` · 今年公历 ${solarText}` : ''}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeAnniversary(item.id)}
-                        title="删除"
-                        className="rounded p-0.5 text-muted-foreground/60 opacity-0 transition group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
+                      {editable ? (
+                        <button
+                          type="button"
+                          onClick={() => removeAnniversary(item.id)}
+                          title="删除"
+                          className="rounded p-0.5 text-muted-foreground/60 opacity-0 transition group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      ) : null}
                     </li>
                   );
                 })}
