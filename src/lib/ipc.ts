@@ -12,6 +12,7 @@ import type {
 } from '@/types/vault';
 import type { SysAction } from '@/types/sys';
 import type { WinOptItem, WinOptTarget } from '@/types/winopt';
+import type { AppPackage } from '@/types/apps';
 // 仅类型引用（`import type` 编译期擦除，不引入运行期循环依赖）
 import type { Todo } from '@/core/data/todosService';
 
@@ -116,6 +117,15 @@ export const ipc = {
 
   /** Windows 优化：单向动作（如卸载 OneDrive） */
   winoptAction: (id: string): Promise<void> => call<void>('winopt_action', { id }),
+  /** 软件安装：目录 + 每项当前安装状态（注册表直读，毫秒级） */
+  appsList: (): Promise<AppPackage[]> => call<AppPackage[]>('apps_list'),
+  /** 软件安装：安装白名单项（winget 静默执行，返回尾部日志） */
+  appsInstall: (id: string): Promise<string> => call<string>('apps_install', { id }),
+  /** 软件安装：卸载白名单项 */
+  appsUninstall: (id: string): Promise<string> => call<string>('apps_uninstall', { id }),
+  /** 软件安装：按 winget 包 id 安装任意包（高级入口） */
+  appsInstallCustom: (wingetId: string): Promise<string> =>
+    call<string>('apps_install_custom', { wingetId }),
   /** 导出备份（targetDir 由用户经 dialog 选择后传入） */
   backupExport: (targetDir: string): Promise<BackupReport> =>
     call<BackupReport>('backup_export', { targetDir }),

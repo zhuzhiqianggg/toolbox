@@ -111,6 +111,11 @@ pub fn run() {
             commands::winopt::winopt_list,
             commands::winopt::winopt_apply,
             commands::winopt::winopt_action,
+            // —— 软件安装（白名单 + winget）——
+            commands::apps::apps_list,
+            commands::apps::apps_install,
+            commands::apps::apps_uninstall,
+            commands::apps::apps_install_custom,
             // —— 备份 / 恢复 ——
             commands::backup::backup_export,
             commands::backup::backup_import,
